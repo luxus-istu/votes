@@ -69,7 +69,7 @@ jobs:
   build-ios:
     name: Build iOS (IPA)
     runs-on: macos-latest
-    # TODO: Fix building steps
+    # TODO: Fix building IPA steps
     if: false
 
     steps:
