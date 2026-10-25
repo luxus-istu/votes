@@ -25,7 +25,6 @@ import ru.luxus.votes.core.theme.CorrectGreen
 import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 import ru.luxus.votes.features.auth.presentation.AuthState
 import ru.luxus.votes.features.auth.presentation.AuthViewModel
 import ru.luxus.votes.features.games.presentation.GamesEvent
@@ -63,8 +62,6 @@ fun HomePage(
                 title = {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            UdmurtSolarSymbol(modifier = Modifier.size(20.dp), color = UdmurtRed)
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Ӟеч-а бур-а удмурт кыл?",
                                 fontWeight = FontWeight.Bold,
@@ -118,8 +115,6 @@ fun HomePage(
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            UdmurtSolarSymbol(modifier = Modifier.size(22.dp), color = UdmurtGold)
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -433,7 +428,6 @@ private fun HomeDashboardCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(emoji, fontSize = 30.sp)
-                UdmurtSolarSymbol(modifier = Modifier.size(16.dp), color = badgeColor)
             }
             Column {
                 Text(

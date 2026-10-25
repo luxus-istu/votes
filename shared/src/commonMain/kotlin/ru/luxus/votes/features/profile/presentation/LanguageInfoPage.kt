@@ -18,8 +18,6 @@ import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
-import ru.luxus.votes.core.widgets.UdmurtOrnamentBand
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun LanguageInfoPage(
@@ -59,7 +57,6 @@ fun LanguageInfoPage(
                                 fontSize = 14.sp
                             )
                         }
-                        UdmurtSolarSymbol(modifier = Modifier.size(36.dp), color = UdmurtGold)
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))

@@ -25,7 +25,6 @@ import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun SortingGamePage(
@@ -196,8 +195,6 @@ private fun CategoryBucketCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            UdmurtSolarSymbol(modifier = Modifier.size(24.dp), color = color)
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = categoryName.replaceFirstChar { it.uppercase() },
                 fontWeight = FontWeight.Bold,

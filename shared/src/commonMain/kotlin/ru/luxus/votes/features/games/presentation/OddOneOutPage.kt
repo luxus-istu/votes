@@ -24,7 +24,6 @@ import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun OddOneOutPage(
@@ -58,8 +57,6 @@ fun OddOneOutPage(
                         modifier = Modifier.padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        UdmurtSolarSymbol(modifier = Modifier.size(24.dp), color = UdmurtRed)
-                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Три слова принадлежат к одной группе, а одно — лишнее. Нажмите на лишнее слово!",
                             fontSize = 14.sp,

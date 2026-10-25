@@ -28,7 +28,6 @@ import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun LessonCardsPage(
@@ -61,7 +60,6 @@ fun LessonCardsPage(
                     fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                 )
-                UdmurtSolarSymbol(modifier = Modifier.size(20.dp), color = UdmurtRed)
             }
 
             Spacer(modifier = Modifier.height(10.dp))

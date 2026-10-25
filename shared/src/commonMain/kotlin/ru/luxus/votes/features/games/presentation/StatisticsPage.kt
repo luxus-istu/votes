@@ -25,7 +25,6 @@ import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun StatisticsPage(
@@ -70,7 +69,6 @@ fun StatisticsPage(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        UdmurtSolarSymbol(modifier = Modifier.size(24.dp), color = UdmurtGold)
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))

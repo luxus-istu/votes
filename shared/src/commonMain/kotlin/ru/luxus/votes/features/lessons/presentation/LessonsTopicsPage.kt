@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.sp
 import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.widgets.QuizScaffold
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun LessonsTopicsPage(
@@ -51,7 +50,6 @@ fun LessonsTopicsPage(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    UdmurtSolarSymbol(modifier = Modifier.size(22.dp), color = UdmurtRed)
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))

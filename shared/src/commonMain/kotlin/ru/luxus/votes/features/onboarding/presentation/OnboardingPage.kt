@@ -27,7 +27,6 @@ import org.jetbrains.compose.resources.painterResource
 import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 import votes.shared.generated.resources.Res
 import votes.shared.generated.resources.mascot_book
 import votes.shared.generated.resources.mascot_book_closeup
@@ -152,8 +151,6 @@ fun OnboardingPage(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                UdmurtSolarSymbol(modifier = Modifier.size(24.dp), color = UdmurtRed)
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Ӟеч-а бур-а удмурт кыл?",
                     fontSize = 15.sp,

@@ -27,7 +27,6 @@ import ru.luxus.votes.core.theme.UdmurtGold
 import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun MemoryGamePage(
@@ -154,10 +153,7 @@ fun MemoryGamePage(
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
-                                        UdmurtSolarSymbol(
-                                            modifier = Modifier.size(32.dp),
-                                            color = White
-                                        )
+                                        Text("🦊", fontSize = 30.sp)
                                     }
                                 }
                             }

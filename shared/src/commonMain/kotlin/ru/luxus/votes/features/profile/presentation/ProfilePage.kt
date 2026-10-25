@@ -31,7 +31,6 @@ import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 import ru.luxus.votes.features.auth.presentation.AuthEvent
 import ru.luxus.votes.features.auth.presentation.AuthState
 import ru.luxus.votes.features.auth.presentation.AuthViewModel
@@ -133,7 +132,6 @@ fun ProfilePage(
                                 fontSize = 16.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            UdmurtSolarSymbol(modifier = Modifier.size(20.dp), color = UdmurtGold)
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(

@@ -19,8 +19,6 @@ import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtOrnamentBand
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 import ru.luxus.votes.features.auth.domain.UserEntity
 import ru.luxus.votes.features.auth.presentation.AuthState
 import ru.luxus.votes.features.auth.presentation.AuthViewModel
@@ -95,7 +93,6 @@ fun ParentReportPage(
                                 fontSize = 12.sp
                             )
                         }
-                        UdmurtSolarSymbol(modifier = Modifier.size(28.dp), color = UdmurtGold)
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))

@@ -19,7 +19,6 @@ import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun GameResultPage(
@@ -47,13 +46,6 @@ fun GameResultPage(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    UdmurtSolarSymbol(
-                        modifier = Modifier.size(56.dp),
-                        color = UdmurtGold
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     Text(
                         text = if (percentage >= 80) "🏆 Тау! Отличный результат!" else if (percentage >= 50) "👍 Ӟеч! Хорошая работа!" else "💪 Попробуй ещё раз!",
                         fontSize = 22.sp,

@@ -45,7 +45,6 @@ import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 import ru.luxus.votes.features.parent.domain.ChildProfileModel
 import ru.luxus.votes.features.parent.domain.learningPaceLabel
 import votes.shared.generated.resources.Res
@@ -164,7 +163,6 @@ private fun ParentDashboardContent(
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    UdmurtSolarSymbol(modifier = Modifier.size(26.dp), color = UdmurtGold)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(

@@ -25,7 +25,6 @@ import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun ChooseTranslationPage(
@@ -128,11 +127,6 @@ fun ChooseTranslationPage(
                                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                UdmurtSolarSymbol(
-                                    modifier = Modifier.size(16.dp),
-                                    color = UdmurtRed.copy(alpha = 0.4f)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = option,
                                     fontSize = 17.sp,
