@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,6 +16,7 @@ import ru.luxus.votes.features.auth.presentation.AuthViewModel
 import ru.luxus.votes.features.games.presentation.CompileWordPage
 import ru.luxus.votes.features.games.presentation.ChooseTranslationPage
 import ru.luxus.votes.features.games.presentation.GameResultPage
+import ru.luxus.votes.features.games.presentation.GamesEvent
 import ru.luxus.votes.features.games.presentation.GamesHubPage
 import ru.luxus.votes.features.games.presentation.GamesViewModel
 import ru.luxus.votes.features.games.presentation.MemoryGamePage
@@ -116,17 +118,7 @@ fun MainNavHost(
         composable<GamesHubRoute> {
             GamesHubPage(
                 viewModel = gamesViewModel,
-                onNavigateToGame = { gameKey ->
-                    when (gameKey) {
-                        "translate" -> navController.navigate(ChooseTranslationRoute)
-                        "oddoneout" -> navController.navigate(OddOneOutRoute)
-                        "sorting" -> navController.navigate(SortingGameRoute)
-                        "memory" -> navController.navigate(MemoryGameRoute)
-                        "compile" -> navController.navigate(CompileWordRoute)
-                        "truefalse" -> navController.navigate(TrueFalseRoute)
-                        else -> navController.navigate(ChooseTranslationRoute)
-                    }
-                },
+                onNavigateToGame = { gameKey -> navController.navigateToGame(gameKey) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -212,7 +204,13 @@ fun MainNavHost(
             LessonCardsPage(
                 topic = route.topic,
                 viewModel = lessonsViewModel,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onPlayRandomGame = { gameKey ->
+                    // Start the game before navigating, otherwise the game screen
+                    // has no questions to render (black screen)
+                    gamesViewModel.onEvent(GamesEvent.StartGame(gameKey))
+                    navController.navigateToGame(gameKey)
+                }
             )
         }
 
@@ -291,5 +289,18 @@ fun MainNavHost(
                 onBack = { navController.popBackStack() }
             )
         }
+    }
+}
+
+/** Opens the mini-game matching [gameKey] (also used by the lessons victory slide). */
+private fun NavHostController.navigateToGame(gameKey: String) {
+    when (gameKey) {
+        "translate" -> navigate(ChooseTranslationRoute)
+        "oddoneout" -> navigate(OddOneOutRoute)
+        "sorting" -> navigate(SortingGameRoute)
+        "memory" -> navigate(MemoryGameRoute)
+        "compile" -> navigate(CompileWordRoute)
+        "truefalse" -> navigate(TrueFalseRoute)
+        else -> navigate(ChooseTranslationRoute)
     }
 }
