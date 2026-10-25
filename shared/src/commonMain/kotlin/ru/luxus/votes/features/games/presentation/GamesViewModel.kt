@@ -67,7 +67,9 @@ sealed interface GamesState {
         val scrambledLetters: List<Char> = emptyList(),
         val currentIndex: Int,
         val totalQuestions: Int,
-        val score: Int
+        val score: Int,
+        val hintLevel: Int = 0,
+        val feedback: String? = null,
     ) : GamesState
 
     data class SortingInProgress(
@@ -266,18 +268,44 @@ class GamesViewModel(
 
     private fun answerCompile(assembledWord: String) {
         val current = _state.value as? GamesState.QuizInProgress ?: return
-        val isCorrect = assembledWord.trim().equals(current.question.udmurt.trim(), ignoreCase = true)
+        val target = current.question.udmurt.replace(" ", "")
+        val isCorrect = assembledWord.trim().equals(target.trim(), ignoreCase = true)
 
-        viewModelScope.launch { repository.saveResult(current.gameKey, isCorrect, current.question) }
+        if (isCorrect) {
+            playSound("success")
+            viewModelScope.launch { repository.saveResult(current.gameKey, true, current.question) }
+            _state.value = GamesState.QuizAnswered(
+                isCorrect = true,
+                previous = current,
+                correctAnswer = current.question.udmurt,
+                explanation = "Правильное написание: «${current.question.udmurt}» (${current.question.transcription})"
+            )
+            return
+        }
 
-        if (isCorrect) playSound("success") else playSound("error")
+        playSound("error")
+        val maxHint = target.length + 1
 
-        _state.value = GamesState.QuizAnswered(
-            isCorrect = isCorrect,
-            previous = current,
-            correctAnswer = current.question.udmurt,
-            explanation = "Правильное написание: «${current.question.udmurt}» (${current.question.transcription})"
-        )
+        if (current.hintLevel + 1 > maxHint) {
+            // All hints have been shown – reveal the answer and move on
+            viewModelScope.launch { repository.saveResult(current.gameKey, false, current.question) }
+            _state.value = GamesState.QuizAnswered(
+                isCorrect = false,
+                previous = current,
+                correctAnswer = current.question.udmurt,
+                explanation = "Правильное написание: «${current.question.udmurt}» (${current.question.transcription})"
+            )
+        } else {
+            // Stay on the same word and reveal a little more of the hint
+            _state.value = current.copy(
+                hintLevel = current.hintLevel + 1,
+                feedback = if (current.hintLevel == 0) {
+                    "Не совсем! Вот подсказка-произношение."
+                } else {
+                    "Попробуй ещё — в подсказке открылась новая буква."
+                }
+            )
+        }
     }
 
     // --- GAME 2: Find the Odd One Out (Найди лишнее слово) ---

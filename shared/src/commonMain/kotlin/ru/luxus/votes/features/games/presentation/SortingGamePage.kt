@@ -99,12 +99,6 @@ fun SortingGamePage(
                                 color = UdmurtRed,
                                 fontWeight = FontWeight.Medium
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "«${currentItem.russian}»",
-                                fontSize = 18.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
 
                             Spacer(modifier = Modifier.height(12.dp))
 

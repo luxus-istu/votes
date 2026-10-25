@@ -77,11 +77,34 @@ fun CompileWordPage(
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         )
-                        Text(
-                            text = "Подсказка: ${current.question.transcription}",
-                            fontSize = 14.sp,
-                            color = UdmurtRed
-                        )
+
+                        if (current.hintLevel >= 1) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Подсказка: ${current.question.transcription}",
+                                fontSize = 14.sp,
+                                color = UdmurtRed,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        if (current.hintLevel >= 2) {
+                            val cleanWord = current.question.udmurt.replace(" ", "")
+                            val revealedLetters = (current.hintLevel - 1).coerceIn(0, cleanWord.length)
+                            val maskedWord = cleanWord.mapIndexed { index, char ->
+                                if (index < revealedLetters) char else '•'
+                            }.joinToString(" ")
+
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = maskedWord,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp,
+                                color = UdmurtRed,
+                                textAlign = TextAlign.Center
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(10.dp))
 
@@ -105,6 +128,25 @@ fun CompileWordPage(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
+                    }
+                }
+
+                if (current.feedback != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = IncorrectRed.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = current.feedback,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            textAlign = TextAlign.Center,
+                            color = IncorrectRed,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
                     }
                 }
 
