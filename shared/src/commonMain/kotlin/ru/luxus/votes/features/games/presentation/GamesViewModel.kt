@@ -146,8 +146,8 @@ class GamesViewModel(
             val goal = activeChild?.targetWordsPerDay ?: 5
             val today = getTodayDateString()
             _state.value = GamesState.Initial(
-                stats = repository.getStats(),
-                topErrorWords = repository.getTopErrorWords(),
+                stats = repository.getStatsForActiveChild(),
+                topErrorWords = repository.getTopErrorWordsForActiveChild(),
                 dailyProgress = dailyProgress,
                 wordOfTheDay = repository.getWordOfTheDay(),
                 learningPace = learningPaceLabel(goal),

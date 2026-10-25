@@ -184,7 +184,11 @@ fun MainNavHost(
             GameResultPage(
                 viewModel = gamesViewModel,
                 onBackToGames = {
-                    navController.popBackStack(GamesHubRoute, inclusive = false)
+                    // Games opened from the victory slide have no games hub on the
+                    // stack – fall back to the topic list so Back always works
+                    if (!navController.popBackStack(GamesHubRoute, inclusive = false)) {
+                        navController.popBackStack(LessonsTopicsRoute, inclusive = false)
+                    }
                 }
             )
         }

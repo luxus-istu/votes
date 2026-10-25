@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,6 +29,12 @@ fun LessonsTopicsPage(
     onBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+
+    // Reload on every visit: the ViewModel is shared across sessions, so a new
+    // child must never see the previous child's topic progress
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(LessonsEvent.LoadData)
+    }
 
     QuizScaffold(
         title = "Словарь и Уроки",

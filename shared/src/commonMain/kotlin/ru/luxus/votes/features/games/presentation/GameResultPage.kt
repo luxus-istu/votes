@@ -94,7 +94,7 @@ fun GameResultPage(
             Spacer(modifier = Modifier.height(20.dp))
 
             T2Button(
-                text = "Вернуться в раздел игр",
+                text = "Продолжить",
                 onClick = onBackToGames,
                 modifier = Modifier.fillMaxWidth(),
                 containerColor = UdmurtRed

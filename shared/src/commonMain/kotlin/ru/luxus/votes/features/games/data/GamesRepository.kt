@@ -198,6 +198,44 @@ class GamesRepository(private val db: AppDatabase) {
         )
     }
 
+    /** Game statistics of the signed-in child (falls back to device-wide stats). */
+    suspend fun getStatsForActiveChild(): GameStats {
+        val activeChild = childDao.getActiveChild() ?: return getStats()
+        val rows = childDao.getChildStats(activeChild.id)
+        var totalAnswered = 0
+        var totalCorrect = 0
+        val correctMap = mutableMapOf<String, Int>()
+        val totalMap = mutableMapOf<String, Int>()
+
+        rows.forEach { row ->
+            totalAnswered += row.totalAnswered
+            totalCorrect += row.totalCorrect
+            correctMap[row.gameKey] = row.totalCorrect
+            totalMap[row.gameKey] = row.totalAnswered
+        }
+
+        return GameStats(
+            totalAnswered = totalAnswered,
+            totalCorrect = totalCorrect,
+            correctPerGame = correctMap,
+            totalPerGame = totalMap,
+        )
+    }
+
+    /** Most frequent mistakes of the signed-in child. */
+    suspend fun getTopErrorWordsForActiveChild(): List<WordErrorEntry> {
+        val activeChild = childDao.getActiveChild() ?: return getTopErrorWords()
+        return childDao.getChildWordErrors(activeChild.id).map {
+            WordErrorEntry(
+                wordId = it.wordId,
+                udmurt = it.udmurt,
+                russian = it.russian,
+                errorCount = it.errorCount,
+                successCount = it.successCount,
+            )
+        }
+    }
+
     suspend fun saveResult(gameKey: String, isCorrect: Boolean, word: WordEntry? = null) =
         db.withWriteTransaction {
             val existing = gameStatsDao.getForGame(gameKey)
@@ -267,6 +305,17 @@ class GamesRepository(private val db: AppDatabase) {
     suspend fun getViewedWordIds(): Set<String> {
         ensureSeeded()
         return lessonProgressDao.getViewedWordIds().toSet()
+    }
+
+    /**
+     * Lesson progress of the child who is currently signed in. Falls back to the
+     * device-wide progress only when there is no active child profile.
+     */
+    suspend fun getViewedWordIdsForActiveChild(): Set<String> {
+        ensureSeeded()
+        val activeChild = childDao.getActiveChild()
+            ?: return lessonProgressDao.getViewedWordIds().toSet()
+        return childDao.getChildLessonProgress(activeChild.id).toSet()
     }
 
     suspend fun markWordViewed(wordId: String) = db.withWriteTransaction {

@@ -51,9 +51,12 @@ class LessonsViewModel(
 
     private fun loadData() {
         viewModelScope.launch {
-            _state.value = LessonsState.Loading
+            if (_state.value !is LessonsState.Loaded) {
+                _state.value = LessonsState.Loading
+            }
             val words = gamesRepository.getWords()
-            val viewedIds = gamesRepository.getViewedWordIds()
+            // Progress is per child, so siblings don't inherit each other's topics
+            val viewedIds = gamesRepository.getViewedWordIdsForActiveChild()
             val grouped = words.groupBy { it.category }
             val progress = LessonProgress(viewedWordIds = viewedIds)
 
