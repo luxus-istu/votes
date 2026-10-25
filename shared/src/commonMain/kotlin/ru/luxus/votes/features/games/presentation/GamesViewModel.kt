@@ -27,7 +27,9 @@ data class MemoryCard(
     val subtext: String = "",
     val emoji: String = "",
     val isFlipped: Boolean = false,
-    val isMatched: Boolean = false
+    val isMatched: Boolean = false,
+    /** 0 = Udmurt word side, 1 = Russian translation side */
+    val face: Int = 0
 )
 
 sealed interface GamesEvent {
@@ -84,7 +86,8 @@ sealed interface GamesState {
         val moves: Int,
         val matchesFound: Int,
         val totalPairs: Int,
-        val isLocked: Boolean = false
+        val isLocked: Boolean = false,
+        val gameId: Int = 0,
     ) : GamesState
 
     data class QuizAnswered(
@@ -407,7 +410,11 @@ class GamesViewModel(
     // --- GAME 4: Memory (Найди пару) ---
 
     private fun startMemoryGame(allWords: List<WordEntry>) {
-        val selectedWords = allWords.shuffled().take(6) // 6 pairs = 12 cards
+        // Unique words only, so every pair is guaranteed to have two different faces
+        val selectedWords = allWords
+            .shuffled()
+            .distinctBy { it.id }
+            .take(6) // 6 pairs = 12 cards
         var cardId = 0
         val cards = mutableListOf<MemoryCard>()
 
@@ -421,7 +428,8 @@ class GamesViewModel(
                     subtext = word.transcription,
                     emoji = "📖",
                     isFlipped = false,
-                    isMatched = false
+                    isMatched = false,
+                    face = 0
                 )
             )
             // Card 2: Russian translation + Emoji
@@ -433,7 +441,8 @@ class GamesViewModel(
                     subtext = "",
                     emoji = word.emoji,
                     isFlipped = false,
-                    isMatched = false
+                    isMatched = false,
+                    face = 1
                 )
             )
         }
@@ -444,7 +453,8 @@ class GamesViewModel(
             moves = 0,
             matchesFound = 0,
             totalPairs = selectedWords.size,
-            isLocked = false
+            isLocked = false,
+            gameId = Random.nextInt()
         )
     }
 
@@ -454,74 +464,86 @@ class GamesViewModel(
 
         val card = current.cards.getOrNull(index) ?: return
         if (card.isFlipped || card.isMatched) return
+        if (current.flippedIndices.contains(index)) return
 
         playSound("click")
 
         val updatedCards = current.cards.toMutableList()
         updatedCards[index] = card.copy(isFlipped = true)
 
-        val newFlipped = current.flippedIndices + index
+        val newFlipped = (current.flippedIndices + index).distinct()
 
-        if (newFlipped.size == 1) {
+        if (newFlipped.size < 2) {
             _state.value = current.copy(
                 cards = updatedCards,
                 flippedIndices = newFlipped
             )
-        } else if (newFlipped.size == 2) {
-            val firstIdx = newFlipped[0]
-            val secondIdx = newFlipped[1]
-            val firstCard = updatedCards[firstIdx]
-            val secondCard = updatedCards[secondIdx]
+            return
+        }
 
-            val isMatch = firstCard.wordId == secondCard.wordId
-            val newMoves = current.moves + 1
+        val firstIdx = newFlipped[0]
+        val secondIdx = newFlipped[1]
+        val firstCard = updatedCards[firstIdx]
+        val secondCard = updatedCards[secondIdx]
+        val newMoves = current.moves + 1
 
-            if (isMatch) {
-                playSound("success")
-                updatedCards[firstIdx] = firstCard.copy(isMatched = true)
-                updatedCards[secondIdx] = secondCard.copy(isMatched = true)
-                val newMatches = current.matchesFound + 1
+        // A pair is valid only when both cards reference the same word AND show
+        // opposite faces (Udmurt word side + Russian translation side).
+        val isMatch = firstCard.id != secondCard.id &&
+            firstCard.wordId == secondCard.wordId &&
+            firstCard.face != secondCard.face
 
-                viewModelScope.launch { repository.saveResult("memory", true) }
+        if (isMatch) {
+            playSound("success")
+            updatedCards[firstIdx] = firstCard.copy(isMatched = true)
+            updatedCards[secondIdx] = secondCard.copy(isMatched = true)
+            val newMatches = current.matchesFound + 1
 
-                if (newMatches == current.totalPairs) {
-                    _state.value = GamesState.QuizComplete(
-                        score = current.totalPairs,
-                        total = current.totalPairs,
-                        gameKey = "memory"
-                    )
-                } else {
-                    _state.value = current.copy(
-                        cards = updatedCards,
-                        flippedIndices = emptyList(),
-                        moves = newMoves,
-                        matchesFound = newMatches
-                    )
-                }
+            viewModelScope.launch { repository.saveResult("memory", true) }
+
+            if (newMatches == current.totalPairs) {
+                _state.value = GamesState.QuizComplete(
+                    score = current.totalPairs,
+                    total = current.totalPairs,
+                    gameKey = "memory"
+                )
             } else {
-                playSound("error")
-                viewModelScope.launch { repository.saveResult("memory", false) }
                 _state.value = current.copy(
                     cards = updatedCards,
-                    flippedIndices = newFlipped,
+                    flippedIndices = emptyList(),
                     moves = newMoves,
-                    isLocked = true
+                    matchesFound = newMatches
                 )
+            }
+        } else {
+            playSound("error")
+            viewModelScope.launch { repository.saveResult("memory", false) }
+            _state.value = current.copy(
+                cards = updatedCards,
+                flippedIndices = newFlipped,
+                moves = newMoves,
+                isLocked = true
+            )
 
-                viewModelScope.launch {
-                    delay(1000)
-                    val resetCards = (_state.value as? GamesState.MemoryInProgress)?.cards?.toMutableList()
-                    if (resetCards != null) {
-                        resetCards[firstIdx] = resetCards[firstIdx].copy(isFlipped = false)
-                        resetCards[secondIdx] = resetCards[secondIdx].copy(isFlipped = false)
-                        _state.value = current.copy(
-                            cards = resetCards,
-                            flippedIndices = emptyList(),
-                            moves = newMoves,
-                            isLocked = false
-                        )
-                    }
-                }
+            val gameId = current.gameId
+            viewModelScope.launch {
+                delay(1000)
+                // Apply the reset only if the same game is still active, and always
+                // use the latest state so a quick restart can't corrupt the board
+                val latest = _state.value as? GamesState.MemoryInProgress ?: return@launch
+                if (latest.gameId != gameId) return@launch
+                if (firstIdx !in latest.cards.indices || secondIdx !in latest.cards.indices) return@launch
+
+                val resetCards = latest.cards.toMutableList()
+                if (resetCards[firstIdx].isMatched || resetCards[secondIdx].isMatched) return@launch
+                resetCards[firstIdx] = resetCards[firstIdx].copy(isFlipped = false)
+                resetCards[secondIdx] = resetCards[secondIdx].copy(isFlipped = false)
+
+                _state.value = latest.copy(
+                    cards = resetCards,
+                    flippedIndices = emptyList(),
+                    isLocked = false
+                )
             }
         }
     }

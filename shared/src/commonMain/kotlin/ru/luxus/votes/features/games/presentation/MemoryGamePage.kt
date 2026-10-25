@@ -94,37 +94,45 @@ fun MemoryGamePage(
                 ) {
                     itemsIndexed(current.cards) { index, card ->
                         val isRevealed = card.isFlipped || card.isMatched
+                        val rotation by animateFloatAsState(
+                            targetValue = if (isRevealed) 180f else 0f,
+                            animationSpec = tween(durationMillis = 380),
+                            label = "memoryCardFlip"
+                        )
 
-                        Card(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(110.dp)
+                                .graphicsLayer {
+                                    rotationY = rotation
+                                    cameraDistance = 12f * density
+                                }
                                 .clip(RoundedCornerShape(16.dp))
                                 .clickable(enabled = !isRevealed && !current.isLocked) {
                                     viewModel.onEvent(GamesEvent.FlipMemoryCard(index))
                                 }
-                                .then(
-                                    if (card.isMatched) {
-                                        Modifier.border(2.dp, CorrectGreen, RoundedCornerShape(16.dp))
-                                    } else Modifier
-                                ),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isRevealed) {
-                                    if (card.isMatched) CorrectGreen.copy(alpha = 0.15f)
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                                } else {
-                                    UdmurtRed
-                                }
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize().padding(8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isRevealed) {
+                            if (rotation > 90f) {
+                                // Front face – counter-rotated so the text is not mirrored
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer { rotationY = 180f }
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(
+                                            if (card.isMatched) CorrectGreen.copy(alpha = 0.15f)
+                                            else MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                        .then(
+                                            if (card.isMatched) {
+                                                Modifier.border(2.dp, CorrectGreen, RoundedCornerShape(16.dp))
+                                            } else Modifier
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Column(
+                                        modifier = Modifier.padding(8.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
@@ -148,13 +156,17 @@ fun MemoryGamePage(
                                             )
                                         }
                                     }
-                                } else {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text("🦊", fontSize = 30.sp)
-                                    }
+                                }
+                            } else {
+                                // Card back
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(UdmurtRed),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🦊", fontSize = 30.sp)
                                 }
                             }
                         }
