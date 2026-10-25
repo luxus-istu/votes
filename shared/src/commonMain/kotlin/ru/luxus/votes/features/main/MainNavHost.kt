@@ -25,6 +25,7 @@ import ru.luxus.votes.features.games.presentation.SortingGamePage
 import ru.luxus.votes.features.games.presentation.StatisticsPage
 import ru.luxus.votes.features.games.presentation.TrueFalsePage
 import ru.luxus.votes.features.home.presentation.HomePage
+import ru.luxus.votes.features.lessons.presentation.AlphabetPage
 import ru.luxus.votes.features.lessons.presentation.LessonCardsPage
 import ru.luxus.votes.features.lessons.presentation.LessonsTopicsPage
 import ru.luxus.votes.features.lessons.presentation.LessonsViewModel
@@ -37,6 +38,7 @@ import ru.luxus.votes.features.profile.presentation.ParentReportPage
 import ru.luxus.votes.features.profile.presentation.ProfilePage
 import ru.luxus.votes.features.settings.presentation.SettingsPage
 import ru.luxus.votes.features.settings.presentation.SettingsViewModel
+import ru.luxus.votes.navigation.AlphabetRoute
 import ru.luxus.votes.navigation.ChooseTranslationRoute
 import ru.luxus.votes.navigation.ChildFormRoute
 import ru.luxus.votes.navigation.CompileWordRoute
@@ -194,6 +196,15 @@ fun MainNavHost(
                 onTopicSelected = { topic ->
                     navController.navigate(LessonCardsRoute(topic))
                 },
+                onOpenAlphabet = { navController.navigate(AlphabetRoute) },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // Udmurt alphabet
+        composable<AlphabetRoute> {
+            AlphabetPage(
+                viewModel = lessonsViewModel,
                 onBack = { navController.popBackStack() }
             )
         }

@@ -42,6 +42,9 @@ data object GameResultRoute
 data object LessonsTopicsRoute
 
 @Serializable
+data object AlphabetRoute
+
+@Serializable
 data class LessonCardsRoute(val topic: String)
 
 @Serializable

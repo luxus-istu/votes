@@ -1,5 +1,6 @@
 package ru.luxus.votes.features.lessons.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,7 @@ import ru.luxus.votes.core.widgets.QuizScaffold
 fun LessonsTopicsPage(
     viewModel: LessonsViewModel,
     onTopicSelected: (String) -> Unit,
+    onOpenAlphabet: () -> Unit,
     onBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -39,6 +41,48 @@ fun LessonsTopicsPage(
             }
 
             is LessonsState.Loaded -> {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .clickable(onClick = onOpenAlphabet),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = UdmurtGold.copy(alpha = 0.16f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .background(UdmurtGold.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Ӟ", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = UdmurtRed)
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Удмуртский алфавит",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "38 букв, включая ӝ, ӟ, ӥ, ӧ, ӵ — с озвучкой",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                        Text("→", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = UdmurtRed)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
