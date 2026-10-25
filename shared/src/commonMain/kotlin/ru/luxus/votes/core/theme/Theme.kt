@@ -5,7 +5,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
 private val LightColorScheme = lightColorScheme(
     primary = UdmurtRed,
@@ -76,8 +79,18 @@ fun UdmurtTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
-        content = content
+    // Kids' app: scale all text up for readability while still respecting the
+    // system font-size setting (capped so layouts stay usable).
+    val systemDensity = LocalDensity.current
+    val kidFriendlyDensity = Density(
+        density = systemDensity.density,
+        fontScale = (systemDensity.fontScale * 1.2f).coerceIn(1.2f, 1.8f)
     )
+
+    CompositionLocalProvider(LocalDensity provides kidFriendlyDensity) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+            content = content
+        )
+    }
 }
