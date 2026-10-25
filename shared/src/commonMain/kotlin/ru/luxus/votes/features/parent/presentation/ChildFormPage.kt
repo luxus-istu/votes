@@ -271,9 +271,14 @@ fun ChildFormPage(
                                 color = if (selected) UdmurtRed else MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "${option.wordsText} • ${option.hint}",
+                                text = option.wordsText,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                            )
+                            Text(
+                                text = option.hint,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                             )
                         }
                         if (selected) {

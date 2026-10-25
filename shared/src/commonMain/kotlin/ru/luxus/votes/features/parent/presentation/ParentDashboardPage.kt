@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
@@ -80,17 +81,21 @@ fun ParentDashboardPage(
                 title = {
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("👨‍👩‍👧‍👦", fontSize = 20.sp)
+                            Text("👨‍👩‍👧‍👦", fontSize = 18.sp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Кабинет родителя",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
+                                fontSize = 17.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         Text(
-                            text = "Успеваемость и статистика детей",
-                            fontSize = 12.sp,
+                            text = "Статистика детей",
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                         )
                     }
@@ -160,13 +165,13 @@ private fun ParentDashboardContent(
                     Text(
                         text = "Семейный дашборд",
                         color = White,
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Контроль успеваемости детей по удмуртскому языку (Постановление № 748)",
+                    text = "Успеваемость детей по удмуртскому языку",
                     color = White.copy(alpha = 0.9f),
                     fontSize = 12.sp,
                     lineHeight = 16.sp
@@ -174,20 +179,54 @@ private fun ParentDashboardContent(
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column {
-                        Text("Детей", fontSize = 11.sp, color = White.copy(alpha = 0.7f))
-                        Text("${state.children.size}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = White)
-                    }
-                    Column {
-                        Text("Слов изучено", fontSize = 11.sp, color = White.copy(alpha = 0.7f))
-                        Text("${state.totalLearnedAcrossAll}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = UdmurtGold)
-                    }
-                    Column {
-                        Text("Средняя точность", fontSize = 11.sp, color = White.copy(alpha = 0.7f))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
-                            "${(state.averageAccuracyAcrossAll * 100).toInt()}%",
+                            text = "Детей",
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
+                            color = White.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "${state.children.size}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = White
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Слов",
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
+                            color = White.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "${state.totalLearnedAcrossAll}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = UdmurtGold
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Точность",
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
+                            color = White.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "${(state.averageAccuracyAcrossAll * 100).toInt()}%",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = White
@@ -216,7 +255,7 @@ private fun ParentDashboardContent(
                 TextButton(onClick = onOpenAdd) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = UdmurtRed)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Добавить", color = UdmurtRed, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("Добавить", color = UdmurtRed, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
                 }
             }
         }
@@ -288,9 +327,11 @@ private fun ParentDashboardContent(
                                 text = listOf(selected.name, selected.lastName)
                                     .filter { it.isNotBlank() }
                                     .joinToString(" "),
-                                fontSize = 20.sp,
+                                fontSize = 19.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = White
+                                color = White,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = buildString {
@@ -304,7 +345,9 @@ private fun ParentDashboardContent(
                                 Text(
                                     text = "Вход: ${selected.childEmail}",
                                     fontSize = 11.sp,
-                                    color = White.copy(alpha = 0.7f)
+                                    color = White.copy(alpha = 0.7f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -345,9 +388,12 @@ private fun ParentDashboardContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Освоение курса (1-й этап):",
+                            text = "Освоение курса:",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
                         )
                         val pct = if (selected.totalWordsAvailable > 0) (selected.wordsLearnedCount * 100 / selected.totalWordsAvailable) else 0
                         Text(
@@ -373,10 +419,7 @@ private fun ParentDashboardContent(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(
                             text = "Выучено: ${selected.wordsLearnedCount} из ${selected.totalWordsAvailable} слов",
                             fontSize = 12.sp,
@@ -396,7 +439,7 @@ private fun ParentDashboardContent(
 
             // Topic Mastery Breakdown
             Text(
-                text = "Освоение тем словаря:",
+                text = "Темы словаря:",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -415,7 +458,7 @@ private fun ParentDashboardContent(
 
             // Mini-Games Performance Matrix (6 games)
             Text(
-                text = "Успеваемость по 6 мини-играм:",
+                text = "Успеваемость в играх:",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -470,7 +513,7 @@ private fun ParentDashboardContent(
 
             // Problematic Words (Mistakes)
             Text(
-                text = "Слова, требующие внимания:",
+                text = "Слова для повторения:",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -630,7 +673,7 @@ private fun ChildSummaryCard(
 ) {
     Card(
         modifier = Modifier
-            .width(164.dp)
+            .width(176.dp)
             .clickable(onClick = onClick)
             .then(
                 if (isSelected) Modifier.border(2.dp, UdmurtRed, RoundedCornerShape(20.dp))
@@ -663,13 +706,17 @@ private fun ChildSummaryCard(
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Text(
-                text = "${child.age} лет • ${learningPaceLabel(child.targetWordsPerDay).lowercase()} темп",
+                text = "${child.age} лет • ${learningPaceLabel(child.targetWordsPerDay).lowercase()}",
                 fontSize = 10.sp,
                 textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
 
