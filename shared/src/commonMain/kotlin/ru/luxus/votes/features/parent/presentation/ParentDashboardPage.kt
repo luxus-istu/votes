@@ -707,6 +707,23 @@ private fun ChildSummaryCard(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                val learnedFraction = if (child.totalWordsAvailable > 0) {
+                    child.wordsLearnedCount.toFloat() / child.totalWordsAvailable
+                } else {
+                    0f
+                }
+                LinearProgressIndicator(
+                    progress = { learnedFraction.coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = if (isSelected) UdmurtRed else UdmurtGold,
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))

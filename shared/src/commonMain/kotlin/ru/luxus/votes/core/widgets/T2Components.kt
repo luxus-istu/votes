@@ -36,9 +36,12 @@ fun T2Button(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(52.dp),
+        // Adaptive height: long labels (e.g. "Скопировать отчёт для учителя")
+        // may wrap to two lines instead of being clipped
+        modifier = modifier.heightIn(min = 52.dp),
         enabled = enabled,
         shape = RoundedCornerShape(100.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor
@@ -48,7 +51,9 @@ fun T2Button(
             text = text.uppercase(),
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp,
-            letterSpacing = 1.2.sp
+            letterSpacing = 1.sp,
+            lineHeight = 20.sp,
+            textAlign = TextAlign.Center
         )
     }
 }
