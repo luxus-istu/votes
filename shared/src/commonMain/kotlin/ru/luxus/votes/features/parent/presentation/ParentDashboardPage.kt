@@ -1,7 +1,6 @@
 package ru.luxus.votes.features.parent.presentation
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,10 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -267,25 +263,14 @@ private fun ParentDashboardContent(
             // No children yet: one prominent call-to-action block
             EmptyChildrenCard(onClick = onOpenAdd)
         } else {
-            // Fluid two-column grid: cards stretch with the screen width
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                state.children.chunked(2).forEach { rowChildren ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowChildren.forEach { child ->
-                            ChildSummaryCard(
-                                child = child,
-                                isSelected = child.id == selected?.id,
-                                onClick = { onSelectChild(child.id) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        if (rowChildren.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                state.children.forEach { child ->
+                    ChildSummaryCard(
+                        child = child,
+                        isSelected = child.id == selected?.id,
+                        onClick = { onSelectChild(child.id) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
@@ -681,103 +666,68 @@ private fun ChildSummaryCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .then(
-                if (isSelected) Modifier.border(2.dp, UdmurtRed, RoundedCornerShape(20.dp))
-                else Modifier
-            ),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) UdmurtRed.copy(alpha = 0.07f) else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isSelected) UdmurtRed.copy(alpha = 0.08f)
+            else MaterialTheme.colorScheme.surfaceVariant
         ),
-        elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 1.dp)
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(58.dp)
-                    .background(UdmurtGold.copy(alpha = 0.22f), CircleShape)
-                    .border(2.dp, UdmurtGold.copy(alpha = 0.6f), CircleShape),
+                    .size(50.dp)
+                    .background(UdmurtGold.copy(alpha = 0.22f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(child.avatar, fontSize = 30.sp)
+                Text(child.avatar, fontSize = 26.sp)
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            Text(
-                text = listOf(child.name, child.lastName).filter { it.isNotBlank() }.joinToString(" "),
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = listOf(child.name, child.lastName).filter { it.isNotBlank() }.joinToString(" "),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "${child.age} лет • ${learningPaceLabel(child.targetWordsPerDay).lowercase()}",
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
 
-            Text(
-                text = "${child.age} лет • ${learningPaceLabel(child.targetWordsPerDay).lowercase()}",
-                fontSize = 10.sp,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = UdmurtRed.copy(alpha = 0.09f)
             ) {
                 Text(
-                    text = "${(child.accuracy * 100).toInt()}% точности",
-                    fontSize = 10.sp,
+                    text = "${(child.accuracy * 100).toInt()}%",
+                    fontSize = 11.sp,
                     color = UdmurtRed,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            UdmurtOrnamentBand(
-                modifier = Modifier.fillMaxWidth(),
-                color = if (isSelected) UdmurtRed else UdmurtGold
-            )
-        }
-    }
-}
-
-/** Small Udmurt embroidery-inspired ornament band (diamond motif). */
-@Composable
-private fun UdmurtOrnamentBand(
-    modifier: Modifier = Modifier,
-    color: Color = UdmurtRed,
-) {
-    Canvas(modifier = modifier.fillMaxWidth().height(10.dp)) {
-        val step = 14.dp.toPx()
-        val midY = size.height / 2f
-        var x = 0f
-        while (x + step <= size.width) {
-            val diamond = Path().apply {
-                moveTo(x, midY)
-                lineTo(x + step / 2f, 0f)
-                lineTo(x + step, midY)
-                lineTo(x + step / 2f, size.height)
-                close()
+            if (isSelected) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("✓", color = UdmurtRed, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
-            drawPath(diamond, color = color.copy(alpha = 0.35f))
-            drawCircle(
-                color = color.copy(alpha = 0.55f),
-                radius = 1.5.dp.toPx(),
-                center = Offset(x + step / 2f, midY)
-            )
-            x += step
         }
     }
 }
