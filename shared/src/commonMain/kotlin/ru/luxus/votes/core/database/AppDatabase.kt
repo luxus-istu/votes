@@ -37,7 +37,7 @@ import ru.luxus.votes.core.database.entity.WordErrorEntity
         ChildLessonProgressEntity::class,
         ChildWordErrorEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 @ConstructedBy(AppDatabaseConstructor::class)

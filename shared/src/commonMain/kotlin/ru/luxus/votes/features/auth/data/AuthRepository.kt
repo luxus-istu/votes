@@ -3,6 +3,7 @@ package ru.luxus.votes.features.auth.data
 import org.koin.core.annotation.Single
 import ru.luxus.votes.core.database.AppDatabase
 import ru.luxus.votes.core.database.entity.ChildProfileEntity
+import ru.luxus.votes.core.database.entity.SettingsEntity as SettingsRow
 import ru.luxus.votes.core.database.entity.UserEntity as UserRow
 import ru.luxus.votes.features.auth.domain.UserEntity
 import ru.luxus.votes.features.parent.data.ParentRepository
@@ -15,8 +16,27 @@ class AuthRepository(
 
     private val userDao = db.userDao()
     private val childDao = db.childDao()
+    private val settingsDao = db.settingsDao()
 
-    suspend fun checkSession(): UserEntity? = userDao.getCurrentUser()?.toDomain()
+    suspend fun checkSession(): UserEntity? {
+        // Restore a saved child session first; parent sessions live in UserTable
+        val childId = settingsDao.get()?.currentChildId.orEmpty()
+        if (childId.isNotBlank()) {
+            val child = childDao.getChildById(childId)
+            if (child != null) {
+                childDao.setActiveChild(child.id)
+                return child.toSessionUser()
+            }
+            // The profile was deleted – forget the stale session
+            storeChildSession(null)
+        }
+        return userDao.getCurrentUser()?.toDomain()
+    }
+
+    private suspend fun storeChildSession(childId: String?) {
+        val current = settingsDao.get() ?: SettingsRow()
+        settingsDao.upsert(current.copy(currentChildId = childId.orEmpty()))
+    }
 
     /**
      * Login for parents and children:
@@ -32,6 +52,7 @@ class AuthRepository(
                 return Result.failure(Exception("Неверный пароль"))
             }
             userDao.setCurrentUser(parent.email)
+            storeChildSession(null)
             return Result.success(parent.toDomain())
         }
 
@@ -43,8 +64,9 @@ class AuthRepository(
         }
 
         childDao.setActiveChild(child.id)
-        // Child sessions are not persisted: after an app restart the login screen is shown
         userDao.clearCurrentUser()
+        // Remember the child session so it survives app restarts and updates
+        storeChildSession(child.id)
         return Result.success(child.toSessionUser())
     }
 
@@ -77,6 +99,7 @@ class AuthRepository(
         )
         userDao.upsert(newUser.toRow(password = password, isCurrent = true))
         userDao.setCurrentUser(normalizedEmail)
+        storeChildSession(null)
         return Result.success(newUser)
     }
 
@@ -141,6 +164,7 @@ class AuthRepository(
 
     suspend fun logout() {
         userDao.clearCurrentUser()
+        storeChildSession(null)
     }
 
     /** A session user built from a child profile (children have no user table row) */

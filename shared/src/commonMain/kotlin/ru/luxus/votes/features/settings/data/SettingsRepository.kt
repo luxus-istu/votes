@@ -26,8 +26,9 @@ class SettingsRepository(private val db: AppDatabase) {
                 soundEnabled = settings.soundEnabled,
                 notificationsEnabled = settings.notificationsEnabled,
                 geolocationEnabled = settings.geolocationEnabled,
-                // Device onboarding flag must survive settings edits
+                // Device onboarding flag and the saved child session must survive edits
                 appOnboardingDone = existing?.appOnboardingDone ?: false,
+                currentChildId = existing?.currentChildId.orEmpty(),
             )
         )
     }
