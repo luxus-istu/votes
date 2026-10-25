@@ -1,64 +1,82 @@
 package ru.luxus.votes.features.home.presentation
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.Magenta
+import org.jetbrains.compose.resources.painterResource
+import ru.luxus.votes.core.theme.CorrectGreen
+import ru.luxus.votes.core.theme.UdmurtGold
+import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
+import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 import ru.luxus.votes.features.auth.presentation.AuthState
 import ru.luxus.votes.features.auth.presentation.AuthViewModel
+import ru.luxus.votes.features.games.presentation.GamesEvent
+import ru.luxus.votes.features.games.presentation.GamesState
+import ru.luxus.votes.features.games.presentation.GamesViewModel
+import votes.shared.generated.resources.Res
+import votes.shared.generated.resources.mascot_star
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePage(
     authViewModel: AuthViewModel,
+    gamesViewModel: GamesViewModel,
     onNavigateToGames: () -> Unit,
     onNavigateToLessons: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
 ) {
     val authState by authViewModel.state.collectAsState()
     val user = (authState as? AuthState.Authenticated)?.user
+
+    val gamesState by gamesViewModel.state.collectAsState()
+    val initialGames = gamesState as? GamesState.Initial
+    val wordOfTheDay = initialGames?.wordOfTheDay
+
+    var isWordLearned by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        gamesViewModel.loadStats()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            UdmurtSolarSymbol(modifier = Modifier.size(20.dp), color = UdmurtRed)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Ӟеч-а бур-а удмурт кыл?",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         Text(
-                            text = "Удмурт кыл",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
-                        Text(
-                            text = if (user != null) "Зечбуресь, ${user.firstName}!" else "Зечбуресь!",
+                            text = if (user != null) "Ӟечбуресь, ${user.firstName}! 👋" else "Ӟечбуресь! 👋",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onNavigateToProfile) {
-                        Icon(Icons.Default.Person, contentDescription = "Профиль")
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Настройки")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -71,88 +89,289 @@ fun HomePage(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(20.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Hero card
+            // Welcome Hero Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Magenta)
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = UdmurtRed)
             ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(
-                        text = "Учи удмуртский легко",
-                        color = White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Интерактивные уроки, викторины и словарь в одном приложении",
-                        color = White.copy(alpha = 0.9f),
-                        fontSize = 14.sp
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(
+                            start = 20.dp,
+                            top = 20.dp,
+                            bottom = 20.dp,
+                            end = 100.dp
+                        )
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Учи удмуртский с радостью!",
+                                color = White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            UdmurtSolarSymbol(modifier = Modifier.size(22.dp), color = UdmurtGold)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Интерактивный самоучитель для детей 5–10 лет: словарь, озвучка и 6 весёлых мини-игр",
+                            color = White.copy(alpha = 0.9f),
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp
+                        )
+                    }
+
+                    // Mascot bleeds into the whole bottom-right corner
+                    Image(
+                        painter = painterResource(Res.drawable.mascot_star),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .height(124.dp)
+                            .aspectRatio(414f / 418f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Learning pace & today's goal (set by the parent on the dashboard)
+            if (initialGames != null) {
+                val goal = initialGames.dailyWordGoal.coerceAtLeast(1)
+                val learnedToday = initialGames.wordsLearnedToday
+                val goalFraction = (learnedToday.toFloat() / goal).coerceIn(0f, 1f)
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(UdmurtGold.copy(alpha = 0.22f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("🎈", fontSize = 20.sp)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Мой уровень: ${initialGames.learningPace.lowercase()}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Сегодня $learnedToday из $goal новых слов",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                )
+                            }
+                            Text(
+                                text = "${(goalFraction * 100).toInt()}%",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = UdmurtRed
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        LinearProgressIndicator(
+                            progress = { goalFraction },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = if (goalFraction >= 1f) CorrectGreen else UdmurtGold,
+                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Word of the Day (Слово дня)
+            if (wordOfTheDay != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = UdmurtGold.copy(alpha = 0.2f)
+                                ) {
+                                    Text(
+                                        text = "🌟 СЛОВО ДНЯ",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = UdmurtRed
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "«${wordOfTheDay.category}»",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    gamesViewModel.onEvent(
+                                        GamesEvent.PlayAudio(
+                                            wordOfTheDay.udmurt,
+                                            wordOfTheDay.transcription
+                                        )
+                                    )
+                                },
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .background(UdmurtRed.copy(alpha = 0.12f), CircleShape)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Прослушать слово дня",
+                                    tint = UdmurtRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(wordOfTheDay.emoji, fontSize = 42.sp)
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = wordOfTheDay.udmurt,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${wordOfTheDay.transcription} — ${wordOfTheDay.russian}",
+                                    fontSize = 14.sp,
+                                    color = UdmurtRed,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    isWordLearned = true
+                                },
+                                shape = RoundedCornerShape(100.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isWordLearned) CorrectGreen else UdmurtGold.copy(alpha = 0.3f),
+                                    contentColor = if (isWordLearned) White else MaterialTheme.colorScheme.onSurface
+                                ),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                if (isWordLearned) {
+                                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Изучено", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                } else {
+                                    Text("Запомнить", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+            }
 
             Text(
-                text = "Разделы обучения",
+                text = "Главные разделы:",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
+            // 4 Navigation Hub sections
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 HomeDashboardCard(
-                    title = "Уроки",
-                    subtitle = "Карточки и темы",
+                    title = "1. Обучение",
+                    subtitle = "Словарь и карточки слов",
                     emoji = "📚",
+                    badgeColor = UdmurtRed,
                     onClick = onNavigateToLessons,
                     modifier = Modifier.weight(1f)
                 )
 
                 HomeDashboardCard(
-                    title = "Игры",
-                    subtitle = "Викторины и тесты",
+                    title = "2. Игры",
+                    subtitle = "Все 6 развивающих игр",
                     emoji = "🎮",
+                    badgeColor = UdmurtGold,
                     onClick = onNavigateToGames,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                HomeDashboardCard(
+                    title = "3. Профиль",
+                    subtitle = "Кабинет, факты и отчёты",
+                    emoji = "👤",
+                    badgeColor = MaterialTheme.colorScheme.primary,
+                    onClick = onNavigateToProfile,
+                    modifier = Modifier.weight(1f)
+                )
+
+                HomeDashboardCard(
+                    title = "4. Настройки",
+                    subtitle = "Звук, уведомления и гео",
+                    emoji = "⚙️",
+                    badgeColor = MaterialTheme.colorScheme.secondary,
+                    onClick = onNavigateToSettings,
                     modifier = Modifier.weight(1f)
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                HomeDashboardCard(
-                    title = "Профиль",
-                    subtitle = "Личная статистика",
-                    emoji = "👤",
-                    onClick = onNavigateToProfile,
-                    modifier = Modifier.weight(1f)
-                )
-
-                HomeDashboardCard(
-                    title = "Настройки",
-                    subtitle = "Звук и уведомления",
-                    emoji = "⚙️",
-                    onClick = onNavigateToSettings,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
+            // Cultural Heritage footer card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -162,23 +381,26 @@ fun HomePage(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("📍", fontSize = 28.sp)
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("🏛️", fontSize = 28.sp)
+                    Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
-                            text = "Культурные места Удмуртии",
+                            text = "Удмуртская Республика",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Уведомления об исторических местах рядом включены",
+                            text = "Программа поддержки и изучения языка (Постановление № 748)",
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                            lineHeight = 16.sp
                         )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -188,22 +410,31 @@ private fun HomeDashboardCard(
     title: String,
     subtitle: String,
     emoji: String,
+    badgeColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
-            .height(130.dp)
+            .height(136.dp)
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp).fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(emoji, fontSize = 28.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(emoji, fontSize = 30.sp)
+                UdmurtSolarSymbol(modifier = Modifier.size(16.dp), color = badgeColor)
+            }
             Column {
                 Text(
                     text = title,
@@ -211,10 +442,12 @@ private fun HomeDashboardCard(
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    lineHeight = 14.sp
                 )
             }
         }

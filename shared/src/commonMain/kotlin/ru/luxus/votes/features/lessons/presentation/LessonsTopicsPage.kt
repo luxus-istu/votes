@@ -15,8 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.Magenta
+import ru.luxus.votes.core.theme.UdmurtGold
+import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.widgets.QuizScaffold
+import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun LessonsTopicsPage(
@@ -27,25 +29,32 @@ fun LessonsTopicsPage(
     val state by viewModel.state.collectAsState()
 
     QuizScaffold(
-        title = "Уроки и Словарь",
+        title = "Словарь и Уроки",
         onBack = onBack
     ) {
         when (val current = state) {
             is LessonsState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Magenta)
+                    CircularProgressIndicator(color = UdmurtRed)
                 }
             }
 
             is LessonsState.Loaded -> {
-                Text(
-                    text = "Темы для изучения:",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Темы для изучения:",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    UdmurtSolarSymbol(modifier = Modifier.size(22.dp), color = UdmurtRed)
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -58,22 +67,22 @@ fun LessonsTopicsPage(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(18.dp))
                                 .clickable { onTopicSelected(category) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(firstEmoji, fontSize = 28.sp)
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(firstEmoji, fontSize = 32.sp)
+                                    Spacer(modifier = Modifier.width(14.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = category.replaceFirstChar { it.uppercase() },
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 18.sp,
+                                            fontSize = 17.sp,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
@@ -89,7 +98,8 @@ fun LessonsTopicsPage(
                                 LinearProgressIndicator(
                                     progress = { if (wordsInCategory.isEmpty()) 0f else viewedCount.toFloat() / wordsInCategory.size },
                                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                    color = Magenta
+                                    color = UdmurtRed,
+                                    trackColor = UdmurtRed.copy(alpha = 0.15f)
                                 )
                             }
                         }

@@ -17,9 +17,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.Magenta
+import ru.luxus.votes.core.theme.UdmurtGold
+import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
+import ru.luxus.votes.core.widgets.UdmurtSolarSymbol
 
 @Composable
 fun GamesHubPage(
@@ -48,18 +50,25 @@ fun GamesHubPage(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Magenta)
+                    colors = CardDefaults.cardColors(containerColor = UdmurtRed)
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp)
                     ) {
-                        Text(
-                            text = "Ваш прогресс",
-                            color = White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Игровой прогресс",
+                                color = White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            UdmurtSolarSymbol(modifier = Modifier.size(24.dp), color = UdmurtGold)
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -79,22 +88,24 @@ fun GamesHubPage(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
             }
 
             Text(
-                text = "Выберите режим:",
+                text = "Все 6 обучающих игр:",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
+            // Game 1: Choose Translation
             GameModeCard(
-                title = "Выбери перевод",
-                description = "4 варианта перевода для каждого удмуртского слова",
+                title = "1. Выбери перевод",
+                description = "Выбери правильный русский перевод из 4 вариантов",
                 emoji = "🎯",
+                badge = "Быстрый тест",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("translate"))
                     onNavigateToGame("translate")
@@ -103,10 +114,54 @@ fun GamesHubPage(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Game 2: Find the Odd One Out
             GameModeCard(
-                title = "Собери слово",
+                title = "2. Найди лишнее слово",
+                description = "4 слова на удмуртском: три из одной темы, а одно — лишнее!",
+                emoji = "🔍",
+                badge = "Логика",
+                onClick = {
+                    viewModel.onEvent(GamesEvent.StartGame("oddoneout"))
+                    onNavigateToGame("oddoneout")
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Game 3: Sorting
+            GameModeCard(
+                title = "3. Сортировка",
+                description = "Разложи слова и картинки по категориям в правильные корзины",
+                emoji = "🧺",
+                badge = "Категории",
+                onClick = {
+                    viewModel.onEvent(GamesEvent.StartGame("sorting"))
+                    onNavigateToGame("sorting")
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Game 4: Find the Pair (Memory)
+            GameModeCard(
+                title = "4. Найди пару (Memory)",
+                description = "Открывай закрытые карточки и находи пары: слово — перевод",
+                emoji = "🃏",
+                badge = "Память",
+                onClick = {
+                    viewModel.onEvent(GamesEvent.StartGame("memory"))
+                    onNavigateToGame("memory")
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Game 5: Put Word Together
+            GameModeCard(
+                title = "5. Собери слово",
                 description = "Составь удмуртское слово из перемешанных букв",
                 emoji = "🔤",
+                badge = "Буквы",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("compile"))
                     onNavigateToGame("compile")
@@ -115,15 +170,19 @@ fun GamesHubPage(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Game 6: True / False
             GameModeCard(
-                title = "Правда или Ложь",
-                description = "Быстро оценивай верность перевода пар слов",
+                title = "6. Правда или Ложь",
+                description = "Оцени, верно ли слово соответствует картинке и переводу",
                 emoji = "⚡",
+                badge = "Реакция",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("truefalse"))
                     onNavigateToGame("truefalse")
                 }
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -133,14 +192,15 @@ private fun GameModeCard(
     title: String,
     description: String,
     emoji: String,
+    badge: String,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -151,25 +211,44 @@ private fun GameModeCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .background(Magenta.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                    .size(54.dp)
+                    .background(UdmurtGold.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = emoji, fontSize = 26.sp)
+                Text(text = emoji, fontSize = 28.sp)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = UdmurtRed.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = badge,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = UdmurtRed
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    lineHeight = 16.sp
                 )
             }
         }

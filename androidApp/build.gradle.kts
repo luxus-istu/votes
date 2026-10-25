@@ -13,21 +13,21 @@ kotlin {
 dependencies {
     implementation(project(":shared"))
     implementation(libs.koin.core)
-    implementation(libs.koinAndroid)
-
     implementation(libs.androidx.activity.compose)
-
     implementation(libs.compose.uiToolingPreview)
-    debugImplementation(libs.compose.uiTooling)
 }
 
 android {
     namespace = "ru.luxus.votes"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
         applicationId = "ru.luxus.votes"
         minSdk = libs.versions.android.minSdk.get().toInt()
+        compileSdk {
+            version = release(libs.versions.android.compileSdk.release.get().toInt()) {
+                minorApiLevel = libs.versions.android.compileSdk.minor.get().toInt()
+            }
+        }
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"

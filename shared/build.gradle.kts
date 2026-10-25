@@ -7,79 +7,81 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.sqldelight)
+    alias(libs.plugins.koinCompiler)
+}
+
+koinCompiler {
+    compileSafety = true
+    skipDefaultValues = true
+    userLogs = false
 }
 
 kotlin {
     listOf(
-        iosArm64(),
-        iosSimulatorArm64()
+        iosArm64(), iosSimulatorArm64()
     ).forEach { iosTarget ->
         iosTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
         }
     }
-    
+
     android {
-       namespace = "ru.luxus.votes.shared"
-       compileSdk = libs.versions.android.compileSdk.get().toInt()
-       minSdk = libs.versions.android.minSdk.get().toInt()
-    
-       compilerOptions {
-           jvmTarget = JvmTarget.JVM_21
-       }
-       androidResources {
-           enable = true
-       }
-       withHostTest {
-           isIncludeAndroidResources = true
-       }
-       withDeviceTestBuilder {
-           sourceSetTreeName = "test"
-       }.configure {
-           instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-       }
-    }
-    
-    sourceSets {
-        androidMain.dependencies {
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.compose.uiTooling)
-            implementation(libs.sqldelight.android.driver)
-            implementation(libs.koinAndroid)
-        }
-        iosMain.dependencies {
-            implementation(libs.sqldelight.native.driver)
-        }
-        commonMain {
-            kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
-            dependencies {
-                implementation(libs.compose.runtime)
-                implementation(libs.compose.foundation)
-                implementation(libs.compose.material3)
-                implementation(libs.compose.ui)
-                implementation(libs.composeIconsCore)
-                implementation(libs.composeIconsExtended)
-                implementation(libs.compose.components.resources)
-                implementation(libs.compose.uiToolingPreview)
-                implementation(libs.androidx.lifecycle.viewmodelCompose)
-                implementation(libs.androidx.lifecycle.runtimeCompose)
-
-                // Koin & Annotations
-                api(libs.koin.core)
-                implementation(libs.koin.compose)
-                implementation(libs.koin.compose.viewmodel)
-                api(libs.koin.annotations)
-
-                // Serialization & Navigation
-                implementation(libs.kotlinx.serialization.json)
-                implementation(libs.navigation.compose)
-
-                // SQLDelight Database
-                implementation(libs.sqldelight.runtime)
-                implementation(libs.sqldelight.coroutines)
+        namespace = "ru.luxus.votes.shared"
+        compileSdk {
+            version = release(libs.versions.android.compileSdk.release.get().toInt()) {
+                minorApiLevel = libs.versions.android.compileSdk.minor.get().toInt()
             }
+        }
+        minSdk = libs.versions.android.minSdk.get().toInt()
+
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_21
+            freeCompilerArgs.add("-Xexpect-actual-classes")
+        }
+        androidResources {
+            enable = true
+        }
+        withHostTest {
+            isIncludeAndroidResources = true
+        }
+        withDeviceTestBuilder {
+            sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
+    }
+
+    sourceSets {
+        commonMain.dependencies {
+            // UI
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.ui)
+            implementation(libs.compose.material3)
+            implementation(libs.compose.material.icons.core)
+            implementation(libs.composeIconsExtended)
+            implementation(libs.compose.components.resources)
+            implementation(libs.compose.uiToolingPreview)
+
+            // Lifecycle + type-safe navigation
+            implementation(libs.androidx.lifecycle.viewmodel.compose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.navigation.compose)
+            implementation(libs.kotlinx.serialization.core)
+            implementation(libs.kotlinx.serialization.json)
+
+            // Room 3
+            implementation(libs.androidx.room3.runtime)
+            implementation(libs.androidx.sqlite.bundled)
+
+            // Koin (annotations are processed by the Koin compiler plugin)
+            implementation(libs.koin.core)
+            api(libs.koin.annotations)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+
+            implementation(libs.kotlinx.coroutines.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -88,26 +90,7 @@ kotlin {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", libs.koin.ksp.compiler)
-    add("kspAndroid", libs.koin.ksp.compiler)
-    add("kspIosArm64", libs.koin.ksp.compiler)
-    add("kspIosSimulatorArm64", libs.koin.ksp.compiler)
-    androidRuntimeClasspath(libs.compose.uiTooling)
-}
-
-sqldelight {
-    databases {
-        create("VotesDatabase") {
-            packageName.set("ru.luxus.votes.db")
-        }
-    }
-}
-
-tasks.matching { it.name == "kspCommonMainKotlinMetadata" }.all {
-    val kspCommonMainTask = this
-    tasks.configureEach {
-        if (name != "kspCommonMainKotlinMetadata" && (name.startsWith("compile") || name.startsWith("ksp"))) {
-            dependsOn(kspCommonMainTask)
-        }
-    }
+    add("kspAndroid", libs.androidx.room3.compiler)
+    add("kspIosArm64", libs.androidx.room3.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room3.compiler)
 }

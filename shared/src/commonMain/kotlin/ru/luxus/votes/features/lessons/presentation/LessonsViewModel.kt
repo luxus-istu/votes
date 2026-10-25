@@ -7,13 +7,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.Factory
+import ru.luxus.votes.core.sound.SoundPlayer
 import ru.luxus.votes.features.games.data.GamesRepository
 import ru.luxus.votes.features.games.domain.WordEntry
 import ru.luxus.votes.features.lessons.domain.LessonProgress
+import ru.luxus.votes.features.settings.data.SettingsRepository
 
 sealed interface LessonsEvent {
     data object LoadData : LessonsEvent
     data class MarkWordViewed(val wordId: String) : LessonsEvent
+    data class PlayAudio(val text: String, val phonetic: String = "") : LessonsEvent
 }
 
 sealed interface LessonsState {
@@ -26,7 +29,9 @@ sealed interface LessonsState {
 
 @Factory
 class LessonsViewModel(
-    private val gamesRepository: GamesRepository
+    private val gamesRepository: GamesRepository,
+    private val soundPlayer: SoundPlayer,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<LessonsState>(LessonsState.Loading)
@@ -40,6 +45,7 @@ class LessonsViewModel(
         when (event) {
             is LessonsEvent.LoadData -> loadData()
             is LessonsEvent.MarkWordViewed -> markWordViewed(event.wordId)
+            is LessonsEvent.PlayAudio -> playAudio(event.text, event.phonetic)
         }
     }
 
@@ -57,8 +63,22 @@ class LessonsViewModel(
 
     private fun markWordViewed(wordId: String) {
         val current = _state.value as? LessonsState.Loaded ?: return
-        gamesRepository.markWordViewed(wordId)
         val newProgress = current.progress.copyWithViewed(wordId)
         _state.value = current.copy(progress = newProgress)
+
+        viewModelScope.launch {
+            gamesRepository.markWordViewed(wordId)
+            if (settingsRepository.getSettings().soundEnabled) {
+                soundPlayer.playSuccess()
+            }
+        }
+    }
+
+    private fun playAudio(text: String, phonetic: String = "") {
+        viewModelScope.launch {
+            if (settingsRepository.getSettings().soundEnabled) {
+                soundPlayer.playPronunciation(text, phonetic)
+            }
+        }
     }
 }

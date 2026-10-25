@@ -6,7 +6,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,7 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.luxus.votes.core.theme.CorrectGreen
 import ru.luxus.votes.core.theme.IncorrectRed
-import ru.luxus.votes.core.theme.Magenta
+import ru.luxus.votes.core.theme.UdmurtGold
+import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
@@ -31,90 +36,157 @@ fun CompileWordPage(
 ) {
     val state by viewModel.state.collectAsState()
 
-    var selectedIndices by remember { mutableStateOf(setOf<Int>()) }
+    var selectedIndices by remember { mutableStateOf(listOf<Int>()) }
 
     when (val current = state) {
         is GamesState.QuizInProgress -> {
             LaunchedEffect(current.currentIndex) {
-                selectedIndices = emptySet()
+                selectedIndices = emptyList()
             }
 
-            val assembledWord = current.scrambledLetters
-                .filterIndexed { index, _ -> selectedIndices.contains(index) }
-                .joinToString("")
+            val assembledWord = selectedIndices.map { current.scrambledLetters[it] }.joinToString("")
 
             QuizScaffold(
                 title = "Собери слово (${current.currentIndex + 1}/${current.totalQuestions})",
                 onBack = onBack
             ) {
-                Text(
-                    text = "Перевод: «${current.question.russian}» ${current.question.emoji}",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                LinearProgressIndicator(
+                    progress = { (current.currentIndex + 1).toFloat() / current.totalQuestions },
+                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                    color = UdmurtRed,
+                    trackColor = UdmurtRed.copy(alpha = 0.2f)
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Box(
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(current.question.emoji, fontSize = 52.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "«${current.question.russian}»",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Подсказка: ${current.question.transcription}",
+                            fontSize = 14.sp,
+                            color = UdmurtRed
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        IconButton(
+                            onClick = {
+                                viewModel.onEvent(
+                                    GamesEvent.PlayAudio(
+                                        current.question.udmurt,
+                                        current.question.transcription
+                                    )
+                                )
+                            },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(UdmurtGold.copy(alpha = 0.25f), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.VolumeUp,
+                                contentDescription = "Прослушать",
+                                tint = UdmurtRed,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Word construction box
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant,
                             RoundedCornerShape(16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
+                        )
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (assembledWord.isEmpty()) "Нажимайте на буквы" else assembledWord,
-                        fontSize = 24.sp,
+                        text = if (assembledWord.isEmpty()) "Нажимай на буквы ниже" else assembledWord,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (assembledWord.isEmpty()) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else Magenta
+                        color = if (assembledWord.isEmpty()) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else UdmurtRed,
+                        modifier = Modifier.weight(1f)
                     )
-                }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    itemsIndexed(current.scrambledLetters) { index, char ->
-                        val isSelected = selectedIndices.contains(index)
-                        Box(
-                            modifier = Modifier
-                                .size(54.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (isSelected) Magenta.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant
-                                )
-                                .clickable {
-                                    selectedIndices = if (isSelected) {
-                                        selectedIndices - index
-                                    } else {
-                                        selectedIndices + index
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
+                    if (selectedIndices.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                selectedIndices = selectedIndices.dropLast(1)
+                            }
                         ) {
-                            Text(
-                                text = char.toString(),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) Magenta else MaterialTheme.colorScheme.onSurface
+                            Icon(
+                                Icons.AutoMirrored.Filled.Backspace,
+                                contentDescription = "Удалить букву",
+                                tint = UdmurtRed
                             )
                         }
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Letter tiles
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    itemsIndexed(current.scrambledLetters) { index, char ->
+                        val isUsed = selectedIndices.contains(index)
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (isUsed) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    else UdmurtGold.copy(alpha = 0.2f)
+                                )
+                                .clickable(enabled = !isUsed) {
+                                    selectedIndices = selectedIndices + index
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = char.toString(),
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isUsed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 T2Button(
-                    text = "Проверить",
+                    text = "Проверить слово",
                     onClick = { viewModel.onEvent(GamesEvent.AnswerCompile(assembledWord)) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = assembledWord.isNotEmpty()
+                    enabled = assembledWord.isNotEmpty(),
+                    containerColor = UdmurtRed
                 )
             }
         }
@@ -130,33 +202,45 @@ fun CompileWordPage(
                         .weight(1f)
                         .background(
                             if (current.isCorrect) CorrectGreen.copy(alpha = 0.15f) else IncorrectRed.copy(alpha = 0.15f),
-                            RoundedCornerShape(20.dp)
+                            RoundedCornerShape(24.dp)
                         )
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = if (current.isCorrect) "🎉 Отлично!" else "❌ Ошибка",
+                            text = if (current.isCorrect) "🌟 Ӟеч! Ты собрал слово!" else "❌ Не совсем правильно",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (current.isCorrect) CorrectGreen else IncorrectRed
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Верно: «${current.correctAnswer}»",
-                            fontSize = 20.sp,
+                            color = if (current.isCorrect) CorrectGreen else IncorrectRed,
                             textAlign = TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Правильно: «${current.correctAnswer}»",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                        if (current.explanation.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = current.explanation,
+                                fontSize = 15.sp,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 T2Button(
-                    text = "Далее",
+                    text = "Следующее слово",
                     onClick = { viewModel.onEvent(GamesEvent.NextQuestion) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = UdmurtRed
                 )
             }
         }

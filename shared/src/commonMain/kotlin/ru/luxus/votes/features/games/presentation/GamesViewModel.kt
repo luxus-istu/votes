@@ -1,41 +1,99 @@
 package ru.luxus.votes.features.games.presentation
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import org.koin.core.annotation.Factory
+import ru.luxus.votes.core.sound.SoundPlayer
 import ru.luxus.votes.features.games.data.GamesRepository
+import ru.luxus.votes.features.games.domain.DailyProgressEntry
 import ru.luxus.votes.features.games.domain.GameStats
 import ru.luxus.votes.features.games.domain.WordEntry
+import ru.luxus.votes.features.games.domain.WordErrorEntry
+import ru.luxus.votes.features.parent.data.ParentRepository
+import ru.luxus.votes.features.parent.domain.learningPaceLabel
+import ru.luxus.votes.features.settings.data.SettingsRepository
+import ru.luxus.votes.getTodayDateString
 import kotlin.random.Random
+
+data class MemoryCard(
+    val id: Int,
+    val wordId: String,
+    val text: String,
+    val subtext: String = "",
+    val emoji: String = "",
+    val isFlipped: Boolean = false,
+    val isMatched: Boolean = false
+)
 
 sealed interface GamesEvent {
     data object LoadStats : GamesEvent
     data class StartGame(val gameKey: String) : GamesEvent
     data class AnswerTranslate(val answer: String) : GamesEvent
+    data class AnswerOddOneOut(val selectedWord: WordEntry) : GamesEvent
+    data class AnswerSorting(val targetCategory: String) : GamesEvent
+    data class FlipMemoryCard(val index: Int) : GamesEvent
     data class AnswerTrueFalse(val userSaysTrue: Boolean) : GamesEvent
     data class AnswerCompile(val assembledWord: String) : GamesEvent
+    data class PlayAudio(val text: String, val phonetic: String = "") : GamesEvent
     data object NextQuestion : GamesEvent
+    data object ResetProgress : GamesEvent
 }
 
 sealed interface GamesState {
     data object Loading : GamesState
-    data class Initial(val stats: GameStats) : GamesState
+    data class Initial(
+        val stats: GameStats,
+        val topErrorWords: List<WordErrorEntry> = emptyList(),
+        val dailyProgress: List<DailyProgressEntry> = emptyList(),
+        val wordOfTheDay: WordEntry? = null,
+        val learningPace: String = "Обычный",
+        val dailyWordGoal: Int = 5,
+        val wordsLearnedToday: Int = 0,
+    ) : GamesState
+
     data class QuizInProgress(
         val gameKey: String,
         val question: WordEntry,
         val options: List<String>,
-        val scrambledLetters: List<Char>,
+        val oddWords: List<WordEntry> = emptyList(),
+        val oddTarget: WordEntry? = null,
+        val scrambledLetters: List<Char> = emptyList(),
         val currentIndex: Int,
         val totalQuestions: Int,
         val score: Int
     ) : GamesState
+
+    data class SortingInProgress(
+        val categoryA: String,
+        val categoryB: String,
+        val items: List<WordEntry>,
+        val currentItemIndex: Int,
+        val score: Int,
+        val total: Int,
+        val lastFeedback: String? = null
+    ) : GamesState
+
+    data class MemoryInProgress(
+        val cards: List<MemoryCard>,
+        val flippedIndices: List<Int>,
+        val moves: Int,
+        val matchesFound: Int,
+        val totalPairs: Int,
+        val isLocked: Boolean = false
+    ) : GamesState
+
     data class QuizAnswered(
         val isCorrect: Boolean,
         val previous: QuizInProgress,
-        val correctAnswer: String
+        val correctAnswer: String,
+        val explanation: String = ""
     ) : GamesState
+
     data class QuizComplete(
         val score: Int,
         val total: Int,
@@ -45,7 +103,10 @@ sealed interface GamesState {
 
 @Factory
 class GamesViewModel(
-    private val repository: GamesRepository
+    private val repository: GamesRepository,
+    private val parentRepository: ParentRepository,
+    private val soundPlayer: SoundPlayer,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<GamesState>(GamesState.Loading)
@@ -54,7 +115,7 @@ class GamesViewModel(
     private var currentQuestions: List<WordEntry> = emptyList()
 
     init {
-        onEvent(GamesEvent.LoadStats)
+        loadStats()
     }
 
     fun onEvent(event: GamesEvent) {
@@ -62,30 +123,76 @@ class GamesViewModel(
             is GamesEvent.LoadStats -> loadStats()
             is GamesEvent.StartGame -> startGame(event.gameKey)
             is GamesEvent.AnswerTranslate -> answerTranslate(event.answer)
+            is GamesEvent.AnswerOddOneOut -> answerOddOneOut(event.selectedWord)
+            is GamesEvent.AnswerSorting -> answerSorting(event.targetCategory)
+            is GamesEvent.FlipMemoryCard -> flipMemoryCard(event.index)
             is GamesEvent.AnswerTrueFalse -> answerTrueFalse(event.userSaysTrue)
             is GamesEvent.AnswerCompile -> answerCompile(event.assembledWord)
+            is GamesEvent.PlayAudio -> playAudio(event.text, event.phonetic)
             is GamesEvent.NextQuestion -> nextQuestion()
+            is GamesEvent.ResetProgress -> resetProgress()
         }
     }
 
-    private fun loadStats() {
-        val stats = repository.getStats()
-        _state.value = GamesState.Initial(stats)
+    fun loadStats() {
+        viewModelScope.launch {
+            val dailyProgress = repository.getDailyProgress()
+            val activeChild = parentRepository.getActiveChild()
+            val goal = activeChild?.targetWordsPerDay ?: 5
+            val today = getTodayDateString()
+            _state.value = GamesState.Initial(
+                stats = repository.getStats(),
+                topErrorWords = repository.getTopErrorWords(),
+                dailyProgress = dailyProgress,
+                wordOfTheDay = repository.getWordOfTheDay(),
+                learningPace = learningPaceLabel(goal),
+                dailyWordGoal = goal,
+                wordsLearnedToday = dailyProgress.firstOrNull { it.date == today }?.wordsLearnedCount ?: 0,
+            )
+        }
+    }
+
+    private fun playSound(type: String) {
+        viewModelScope.launch {
+            if (!settingsRepository.getSettings().soundEnabled) return@launch
+            when (type) {
+                "success" -> soundPlayer.playSuccess()
+                "error" -> soundPlayer.playError()
+                "click" -> soundPlayer.playClick()
+            }
+        }
+    }
+
+    private fun playAudio(text: String, phonetic: String = "") {
+        viewModelScope.launch {
+            if (!settingsRepository.getSettings().soundEnabled) return@launch
+            soundPlayer.playPronunciation(text, phonetic)
+        }
     }
 
     private fun startGame(gameKey: String) {
-        val allWords = repository.getWords()
-        val pool = if (gameKey == "compile") {
-            allWords.filter { it.udmurt.length <= 10 }
-        } else {
-            allWords
+        viewModelScope.launch {
+            val allWords = repository.getWords()
+            if (allWords.isEmpty()) return@launch
+
+            when (gameKey) {
+                "memory" -> startMemoryGame(allWords)
+                "sorting" -> startSortingGame(allWords)
+                "oddoneout" -> startOddOneOutGame(allWords)
+                "compile" -> {
+                    currentQuestions = allWords.filter { it.udmurt.length in 3..10 && !it.udmurt.contains(" ") }.shuffled().take(8)
+                    if (currentQuestions.isEmpty()) currentQuestions = allWords.take(8)
+                    emitQuestion(gameKey, 0, 0)
+                }
+                else -> {
+                    currentQuestions = allWords.shuffled().take(10)
+                    emitQuestion(gameKey, 0, 0)
+                }
+            }
         }
-
-        currentQuestions = pool.shuffled().take(10)
-        if (currentQuestions.isEmpty()) return
-
-        emitQuestion(gameKey = gameKey, index = 0, score = 0)
     }
+
+    // --- GAME 1, 5, 6: Quiz-based Questions (Translate, Compile, TrueFalse) ---
 
     private fun emitQuestion(gameKey: String, index: Int, score: Int) {
         if (index >= currentQuestions.size) {
@@ -119,27 +226,32 @@ class GamesViewModel(
     private fun answerTranslate(answer: String) {
         val current = _state.value as? GamesState.QuizInProgress ?: return
         val isCorrect = answer == current.question.russian
-        repository.saveResult(current.gameKey, isCorrect)
+        viewModelScope.launch { repository.saveResult(current.gameKey, isCorrect, current.question) }
+
+        if (isCorrect) playSound("success") else playSound("error")
 
         _state.value = GamesState.QuizAnswered(
             isCorrect = isCorrect,
             previous = current,
-            correctAnswer = current.question.russian
+            correctAnswer = current.question.russian,
+            explanation = "«${current.question.udmurt}» переводится как «${current.question.russian}»"
         )
     }
 
     private fun answerTrueFalse(userSaysTrue: Boolean) {
         val current = _state.value as? GamesState.QuizInProgress ?: return
         val shownWord = current.options[0]
-        val isActuallyCorrect = current.options[1] == "true"
+        val isActuallyCorrect = current.options.getOrNull(1) == "true"
         val isCorrect = userSaysTrue == isActuallyCorrect
 
-        repository.saveResult(current.gameKey, isCorrect)
+        viewModelScope.launch { repository.saveResult(current.gameKey, isCorrect, current.question) }
+
+        if (isCorrect) playSound("success") else playSound("error")
 
         val explanation = if (isActuallyCorrect) {
-            "✓ «$shownWord» — верно"
+            "✓ Верно! «${current.question.udmurt}» действительно означает «${current.question.russian}»"
         } else {
-            "✗ Правильно: «${current.question.udmurt}»"
+            "✗ На самом деле «${current.question.udmurt}» — это «${current.question.russian}»"
         }
 
         _state.value = GamesState.QuizAnswered(
@@ -151,15 +263,267 @@ class GamesViewModel(
 
     private fun answerCompile(assembledWord: String) {
         val current = _state.value as? GamesState.QuizInProgress ?: return
-        val isCorrect = assembledWord.trim() == current.question.udmurt.trim()
+        val isCorrect = assembledWord.trim().equals(current.question.udmurt.trim(), ignoreCase = true)
 
-        repository.saveResult(current.gameKey, isCorrect)
+        viewModelScope.launch { repository.saveResult(current.gameKey, isCorrect, current.question) }
+
+        if (isCorrect) playSound("success") else playSound("error")
 
         _state.value = GamesState.QuizAnswered(
             isCorrect = isCorrect,
             previous = current,
-            correctAnswer = current.question.udmurt
+            correctAnswer = current.question.udmurt,
+            explanation = "Правильное написание: «${current.question.udmurt}» (${current.question.transcription})"
         )
+    }
+
+    // --- GAME 2: Find the Odd One Out (Найди лишнее слово) ---
+
+    private fun startOddOneOutGame(allWords: List<WordEntry>) {
+        val categories = allWords.groupBy { it.category }.filter { it.value.size >= 3 }
+        val categoryKeys = categories.keys.toList().shuffled()
+        if (categoryKeys.size < 2) return
+
+        currentQuestions = categoryKeys.take(8).mapNotNull { catA ->
+            val otherCat = categoryKeys.firstOrNull { it != catA } ?: return@mapNotNull null
+            val threeFromA = categories[catA]?.shuffled()?.take(3) ?: return@mapNotNull null
+            val oneFromB = categories[otherCat]?.shuffled()?.firstOrNull() ?: return@mapNotNull null
+            oneFromB // target odd word
+        }
+
+        emitOddOneOutQuestion(0, 0, allWords)
+    }
+
+    private fun emitOddOneOutQuestion(index: Int, score: Int, allWords: List<WordEntry>) {
+        val categories = allWords.groupBy { it.category }.filter { it.value.size >= 3 }
+        val categoryKeys = categories.keys.toList().shuffled()
+
+        if (index >= 8 || categoryKeys.size < 2) {
+            _state.value = GamesState.QuizComplete(
+                score = score,
+                total = 8,
+                gameKey = "oddoneout"
+            )
+            return
+        }
+
+        val mainCat = categoryKeys[index % categoryKeys.size]
+        val otherCat = categoryKeys.first { it != mainCat }
+
+        val threeWords = categories[mainCat]?.shuffled()?.take(3) ?: emptyList()
+        val oddWord = categories[otherCat]?.shuffled()?.firstOrNull() ?: return
+
+        val fourWords = (threeWords + oddWord).shuffled()
+
+        _state.value = GamesState.QuizInProgress(
+            gameKey = "oddoneout",
+            question = oddWord,
+            options = emptyList(),
+            oddWords = fourWords,
+            oddTarget = oddWord,
+            currentIndex = index,
+            totalQuestions = 8,
+            score = score
+        )
+    }
+
+    private fun answerOddOneOut(selectedWord: WordEntry) {
+        val current = _state.value as? GamesState.QuizInProgress ?: return
+        val target = current.oddTarget ?: return
+        val isCorrect = selectedWord.id == target.id
+
+        viewModelScope.launch { repository.saveResult("oddoneout", isCorrect, target) }
+
+        if (isCorrect) playSound("success") else playSound("error")
+
+        val explanation = if (isCorrect) {
+            "🎉 Отлично! «${target.udmurt}» (${target.russian}) относится к теме «${target.category}», а остальные слова — к другой теме!"
+        } else {
+            "Лишнее слово — «${target.udmurt}» (${target.russian}), так как оно относится к категории «${target.category}»!"
+        }
+
+        _state.value = GamesState.QuizAnswered(
+            isCorrect = isCorrect,
+            previous = current,
+            correctAnswer = target.udmurt,
+            explanation = explanation
+        )
+    }
+
+    // --- GAME 3: Sorting (Сортировка) ---
+
+    private fun startSortingGame(allWords: List<WordEntry>) {
+        // Pairs of contrasting categories
+        val candidatePairs = listOf(
+            Pair("дикие животные", "домашние животные"),
+            Pair("продукты", "овощи"),
+            Pair("моя семья", "одежда")
+        )
+        val selectedPair = candidatePairs.shuffled().first()
+        val catAWords = allWords.filter { it.category == selectedPair.first }.shuffled().take(4)
+        val catBWords = allWords.filter { it.category == selectedPair.second }.shuffled().take(4)
+
+        val combined = (catAWords + catBWords).shuffled()
+
+        _state.value = GamesState.SortingInProgress(
+            categoryA = selectedPair.first,
+            categoryB = selectedPair.second,
+            items = combined,
+            currentItemIndex = 0,
+            score = 0,
+            total = combined.size
+        )
+    }
+
+    private fun answerSorting(targetCategory: String) {
+        val current = _state.value as? GamesState.SortingInProgress ?: return
+        if (current.currentItemIndex >= current.items.size) return
+
+        val item = current.items[current.currentItemIndex]
+        val isCorrect = item.category == targetCategory
+
+        viewModelScope.launch { repository.saveResult("sorting", isCorrect, item) }
+
+        if (isCorrect) playSound("success") else playSound("error")
+
+        val newScore = current.score + if (isCorrect) 1 else 0
+        val nextIndex = current.currentItemIndex + 1
+
+        if (nextIndex >= current.total) {
+            _state.value = GamesState.QuizComplete(
+                score = newScore,
+                total = current.total,
+                gameKey = "sorting"
+            )
+        } else {
+            _state.value = current.copy(
+                currentItemIndex = nextIndex,
+                score = newScore,
+                lastFeedback = if (isCorrect) "✓ Верно!" else "✗ «${item.udmurt}» относится к: ${item.category}"
+            )
+        }
+    }
+
+    // --- GAME 4: Memory (Найди пару) ---
+
+    private fun startMemoryGame(allWords: List<WordEntry>) {
+        val selectedWords = allWords.shuffled().take(6) // 6 pairs = 12 cards
+        var cardId = 0
+        val cards = mutableListOf<MemoryCard>()
+
+        selectedWords.forEach { word ->
+            // Card 1: Udmurt word
+            cards.add(
+                MemoryCard(
+                    id = cardId++,
+                    wordId = word.id,
+                    text = word.udmurt,
+                    subtext = word.transcription,
+                    emoji = "📖",
+                    isFlipped = false,
+                    isMatched = false
+                )
+            )
+            // Card 2: Russian translation + Emoji
+            cards.add(
+                MemoryCard(
+                    id = cardId++,
+                    wordId = word.id,
+                    text = word.russian,
+                    subtext = "",
+                    emoji = word.emoji,
+                    isFlipped = false,
+                    isMatched = false
+                )
+            )
+        }
+
+        _state.value = GamesState.MemoryInProgress(
+            cards = cards.shuffled(),
+            flippedIndices = emptyList(),
+            moves = 0,
+            matchesFound = 0,
+            totalPairs = selectedWords.size,
+            isLocked = false
+        )
+    }
+
+    private fun flipMemoryCard(index: Int) {
+        val current = _state.value as? GamesState.MemoryInProgress ?: return
+        if (current.isLocked) return
+
+        val card = current.cards.getOrNull(index) ?: return
+        if (card.isFlipped || card.isMatched) return
+
+        playSound("click")
+
+        val updatedCards = current.cards.toMutableList()
+        updatedCards[index] = card.copy(isFlipped = true)
+
+        val newFlipped = current.flippedIndices + index
+
+        if (newFlipped.size == 1) {
+            _state.value = current.copy(
+                cards = updatedCards,
+                flippedIndices = newFlipped
+            )
+        } else if (newFlipped.size == 2) {
+            val firstIdx = newFlipped[0]
+            val secondIdx = newFlipped[1]
+            val firstCard = updatedCards[firstIdx]
+            val secondCard = updatedCards[secondIdx]
+
+            val isMatch = firstCard.wordId == secondCard.wordId
+            val newMoves = current.moves + 1
+
+            if (isMatch) {
+                playSound("success")
+                updatedCards[firstIdx] = firstCard.copy(isMatched = true)
+                updatedCards[secondIdx] = secondCard.copy(isMatched = true)
+                val newMatches = current.matchesFound + 1
+
+                viewModelScope.launch { repository.saveResult("memory", true) }
+
+                if (newMatches == current.totalPairs) {
+                    _state.value = GamesState.QuizComplete(
+                        score = current.totalPairs,
+                        total = current.totalPairs,
+                        gameKey = "memory"
+                    )
+                } else {
+                    _state.value = current.copy(
+                        cards = updatedCards,
+                        flippedIndices = emptyList(),
+                        moves = newMoves,
+                        matchesFound = newMatches
+                    )
+                }
+            } else {
+                playSound("error")
+                viewModelScope.launch { repository.saveResult("memory", false) }
+                _state.value = current.copy(
+                    cards = updatedCards,
+                    flippedIndices = newFlipped,
+                    moves = newMoves,
+                    isLocked = true
+                )
+
+                viewModelScope.launch {
+                    delay(1000)
+                    val resetCards = (_state.value as? GamesState.MemoryInProgress)?.cards?.toMutableList()
+                    if (resetCards != null) {
+                        resetCards[firstIdx] = resetCards[firstIdx].copy(isFlipped = false)
+                        resetCards[secondIdx] = resetCards[secondIdx].copy(isFlipped = false)
+                        _state.value = current.copy(
+                            cards = resetCards,
+                            flippedIndices = emptyList(),
+                            moves = newMoves,
+                            isLocked = false
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun nextQuestion() {
@@ -168,7 +532,20 @@ class GamesViewModel(
         val nextIndex = prev.currentIndex + 1
         val newScore = prev.score + if (answered.isCorrect) 1 else 0
 
-        emitQuestion(gameKey = prev.gameKey, index = nextIndex, score = newScore)
+        if (prev.gameKey == "oddoneout") {
+            viewModelScope.launch {
+                emitOddOneOutQuestion(nextIndex, newScore, repository.getWords())
+            }
+        } else {
+            emitQuestion(gameKey = prev.gameKey, index = nextIndex, score = newScore)
+        }
+    }
+
+    private fun resetProgress() {
+        viewModelScope.launch {
+            repository.resetAllProgress()
+            loadStats()
+        }
     }
 
     private fun buildOptions(
