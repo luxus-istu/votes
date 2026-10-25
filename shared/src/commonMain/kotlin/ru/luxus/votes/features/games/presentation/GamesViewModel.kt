@@ -284,10 +284,10 @@ class GamesViewModel(
         }
 
         playSound("error")
-        val maxHint = target.length + 1
+        val maxHintLevel = 3
 
-        if (current.hintLevel + 1 > maxHint) {
-            // All hints have been shown – reveal the answer and move on
+        if (current.hintLevel + 1 >= maxHintLevel) {
+            // Two thirds are already revealed – show the full answer and move on
             viewModelScope.launch { repository.saveResult(current.gameKey, false, current.question) }
             _state.value = GamesState.QuizAnswered(
                 isCorrect = false,
@@ -296,13 +296,14 @@ class GamesViewModel(
                 explanation = "Правильное написание: «${current.question.udmurt}» (${current.question.transcription})"
             )
         } else {
-            // Stay on the same word and reveal a little more of the hint
+            // Stay on the same word and open the next third of it
+            val nextHint = current.hintLevel + 1
             _state.value = current.copy(
-                hintLevel = current.hintLevel + 1,
-                feedback = if (current.hintLevel == 0) {
-                    "Не совсем! Вот подсказка-произношение."
+                hintLevel = nextHint,
+                feedback = if (nextHint == 1) {
+                    "Не совсем! Открыли первую треть слова."
                 } else {
-                    "Попробуй ещё — в подсказке открылась новая буква."
+                    "Попробуй ещё — открыли две трети слова."
                 }
             )
         }

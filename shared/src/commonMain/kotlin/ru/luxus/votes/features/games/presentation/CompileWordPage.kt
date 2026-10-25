@@ -81,28 +81,31 @@ fun CompileWordPage(
                         )
 
                         if (current.hintLevel >= 1) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Подсказка: ${current.question.transcription}",
-                                fontSize = 14.sp,
-                                color = UdmurtRed,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-
-                        if (current.hintLevel >= 2) {
                             val cleanWord = current.question.udmurt.replace(" ", "")
-                            val revealedLetters = (current.hintLevel - 1).coerceIn(0, cleanWord.length)
+                            val revealedLetters = when (current.hintLevel) {
+                                1 -> (cleanWord.length + 2) / 3
+                                2 -> (cleanWord.length * 2 + 2) / 3
+                                else -> cleanWord.length
+                            }.coerceIn(0, cleanWord.length)
+
                             val maskedWord = cleanWord.mapIndexed { index, char ->
                                 if (index < revealedLetters) char else '•'
                             }.joinToString(" ")
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Подсказка: ${current.hintLevel} из 3 частей слова",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = UdmurtRed,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = maskedWord,
-                                fontSize = 18.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp,
+                                letterSpacing = 4.sp,
                                 color = UdmurtRed,
                                 textAlign = TextAlign.Center
                             )
