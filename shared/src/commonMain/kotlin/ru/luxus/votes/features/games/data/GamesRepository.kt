@@ -5,6 +5,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.Single
 import ru.luxus.votes.core.database.AppDatabase
+import ru.luxus.votes.core.database.entity.ChildDailyProgressEntity
 import ru.luxus.votes.core.database.entity.ChildLessonProgressEntity
 import ru.luxus.votes.core.database.entity.ChildStatsEntity
 import ru.luxus.votes.core.database.entity.ChildWordErrorEntity
@@ -286,6 +287,16 @@ class GamesRepository(private val db: AppDatabase) {
                     )
                 )
 
+                val childDaily = childDao.getChildDailyProgress(childId, today)
+                childDao.upsertChildDailyProgress(
+                    ChildDailyProgressEntity(
+                        childId = childId,
+                        date = today,
+                        wordsLearnedCount = childDaily?.wordsLearnedCount ?: 0,
+                        gamesPlayedCount = (childDaily?.gamesPlayedCount ?: 0) + 1,
+                    )
+                )
+
                 if (word != null) {
                     val existingError = childDao.getChildWordErrors(childId).firstOrNull { it.wordId == word.id }
                     childDao.upsertChildWordError(
@@ -321,12 +332,23 @@ class GamesRepository(private val db: AppDatabase) {
     suspend fun markWordViewed(wordId: String) = db.withWriteTransaction {
         lessonProgressDao.markViewed(LessonProgressEntity(wordId))
 
+        val today = getTodayDateString()
+
         childDao.getActiveChild()?.let { activeChild ->
             childDao.markChildWordViewed(ChildLessonProgressEntity(activeChild.id, wordId))
+
+            val childDaily = childDao.getChildDailyProgress(activeChild.id, today)
+            childDao.upsertChildDailyProgress(
+                ChildDailyProgressEntity(
+                    childId = activeChild.id,
+                    date = today,
+                    wordsLearnedCount = (childDaily?.wordsLearnedCount ?: 0) + 1,
+                    gamesPlayedCount = childDaily?.gamesPlayedCount ?: 0,
+                )
+            )
         }
 
-        // Increment daily words learned
-        val today = getTodayDateString()
+        // Increment device-wide daily words learned (kept for compatibility)
         val daily = dailyProgressDao.getByDate(today)
         dailyProgressDao.upsert(
             DailyProgressEntity(
@@ -353,6 +375,19 @@ class GamesRepository(private val db: AppDatabase) {
     suspend fun getDailyProgress(): List<DailyProgressEntry> {
         ensureSeeded()
         return dailyProgressDao.getRecent().map {
+            DailyProgressEntry(
+                date = it.date,
+                wordsLearnedCount = it.wordsLearnedCount,
+                gamesPlayedCount = it.gamesPlayedCount,
+            )
+        }
+    }
+
+    /** Daily progress of the signed-in child (falls back to device-wide data). */
+    suspend fun getDailyProgressForActiveChild(): List<DailyProgressEntry> {
+        ensureSeeded()
+        val activeChild = childDao.getActiveChild() ?: return getDailyProgress()
+        return childDao.getRecentChildDailyProgress(activeChild.id).map {
             DailyProgressEntry(
                 date = it.date,
                 wordsLearnedCount = it.wordsLearnedCount,

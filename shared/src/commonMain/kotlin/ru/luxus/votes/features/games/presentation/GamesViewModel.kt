@@ -141,7 +141,7 @@ class GamesViewModel(
 
     fun loadStats() {
         viewModelScope.launch {
-            val dailyProgress = repository.getDailyProgress()
+            val dailyProgress = repository.getDailyProgressForActiveChild()
             val activeChild = parentRepository.getActiveChild()
             val goal = activeChild?.targetWordsPerDay ?: 5
             val today = getTodayDateString()

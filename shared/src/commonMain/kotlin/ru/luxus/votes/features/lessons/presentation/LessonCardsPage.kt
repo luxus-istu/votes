@@ -71,20 +71,10 @@ fun LessonCardsPage(
             )
             val currentPage = pagerState.currentPage
             var flippedPage by remember { mutableStateOf(-1) }
-            var lastStudiedPage by remember { mutableIntStateOf(-1) }
 
-            // Every card the child rotates past counts as studied
-            LaunchedEffect(currentPage, categoryWords) {
+            // Reset the translation reveal when rotating to another card
+            LaunchedEffect(currentPage) {
                 flippedPage = -1
-                val from = if (lastStudiedPage < 0) currentPage
-                else minOf(lastStudiedPage, currentPage)
-                val to = if (lastStudiedPage < 0) currentPage
-                else maxOf(lastStudiedPage, currentPage)
-                for (page in from..to) {
-                    categoryWords[((page % categoryWords.size) + categoryWords.size) % categoryWords.size]
-                        .let { word -> viewModel.onEvent(LessonsEvent.MarkWordViewed(word.id)) }
-                }
-                lastStudiedPage = currentPage
             }
 
             // Header stays visible on the victory slide too
@@ -144,7 +134,15 @@ fun LessonCardsPage(
                         isViewed = word.id in viewedIds,
                         showFinishButton = wordIndex == categoryWords.lastIndex && topicComplete,
                         onFinish = { showVictory = true },
-                        onFlip = { flippedPage = if (flippedPage == page) -1 else page },
+                        onFlip = {
+                            val revealing = flippedPage != page
+                            flippedPage = if (revealing) page else -1
+                            // A word counts as studied once the child reveals its
+                            // translation – merely swiping past it is not enough
+                            if (revealing) {
+                                viewModel.onEvent(LessonsEvent.MarkWordViewed(word.id))
+                            }
+                        },
                         onPlayAudio = {
                             viewModel.onEvent(
                                 LessonsEvent.PlayAudio(word.udmurt, word.transcription)

@@ -12,6 +12,7 @@ import ru.luxus.votes.core.database.dao.UserDao
 import ru.luxus.votes.core.database.dao.WordDao
 import ru.luxus.votes.core.database.dao.WordErrorDao
 import ru.luxus.votes.core.database.entity.ChildLessonProgressEntity
+import ru.luxus.votes.core.database.entity.ChildDailyProgressEntity
 import ru.luxus.votes.core.database.entity.ChildProfileEntity
 import ru.luxus.votes.core.database.entity.ChildStatsEntity
 import ru.luxus.votes.core.database.entity.ChildWordErrorEntity
@@ -36,8 +37,9 @@ import ru.luxus.votes.core.database.entity.WordErrorEntity
         ChildStatsEntity::class,
         ChildLessonProgressEntity::class,
         ChildWordErrorEntity::class,
+        ChildDailyProgressEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 @ConstructedBy(AppDatabaseConstructor::class)

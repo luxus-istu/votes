@@ -6,6 +6,7 @@ import androidx.room3.OnConflictStrategy
 import androidx.room3.Query
 import androidx.room3.Upsert
 import ru.luxus.votes.core.database.entity.ChildLessonProgressEntity
+import ru.luxus.votes.core.database.entity.ChildDailyProgressEntity
 import ru.luxus.votes.core.database.entity.ChildProfileEntity
 import ru.luxus.votes.core.database.entity.ChildStatsEntity
 import ru.luxus.votes.core.database.entity.ChildWordErrorEntity
@@ -93,4 +94,13 @@ interface ChildDao {
 
     @Upsert
     suspend fun upsertChildWordError(error: ChildWordErrorEntity)
+
+    @Query("SELECT * FROM ChildDailyProgressTable WHERE childId = :childId AND date = :date")
+    suspend fun getChildDailyProgress(childId: String, date: String): ChildDailyProgressEntity?
+
+    @Query("SELECT * FROM ChildDailyProgressTable WHERE childId = :childId ORDER BY date DESC LIMIT 14")
+    suspend fun getRecentChildDailyProgress(childId: String): List<ChildDailyProgressEntity>
+
+    @Upsert
+    suspend fun upsertChildDailyProgress(progress: ChildDailyProgressEntity)
 }
