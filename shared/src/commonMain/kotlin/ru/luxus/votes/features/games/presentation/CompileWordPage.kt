@@ -36,15 +36,17 @@ fun CompileWordPage(
 ) {
     val state by viewModel.state.collectAsState()
 
-    var selectedIndices by remember { mutableStateOf(listOf<Int>()) }
-
     when (val current = state) {
         is GamesState.QuizInProgress -> {
-            LaunchedEffect(current.currentIndex) {
-                selectedIndices = emptyList()
+            // Reset the picked letters synchronously when the word changes; a
+            // LaunchedEffect would leave stale indices during the first frame
+            var selectedIndices by remember(current.currentIndex) {
+                mutableStateOf(listOf<Int>())
             }
 
-            val assembledWord = selectedIndices.map { current.scrambledLetters[it] }.joinToString("")
+            val assembledWord = selectedIndices
+                .mapNotNull { current.scrambledLetters.getOrNull(it) }
+                .joinToString("")
 
             QuizScaffold(
                 title = "Собери слово (${current.currentIndex + 1}/${current.totalQuestions})",
