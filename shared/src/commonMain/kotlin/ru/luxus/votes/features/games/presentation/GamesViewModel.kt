@@ -42,6 +42,7 @@ sealed interface GamesEvent {
     data class AnswerTrueFalse(val userSaysTrue: Boolean) : GamesEvent
     data class AnswerCompile(val assembledWord: String) : GamesEvent
     data class PlayAudio(val text: String, val phonetic: String = "") : GamesEvent
+    data class MarkWordViewed(val wordId: String) : GamesEvent
     data object NextQuestion : GamesEvent
     data object ResetProgress : GamesEvent
 }
@@ -53,6 +54,7 @@ sealed interface GamesState {
         val topErrorWords: List<WordErrorEntry> = emptyList(),
         val dailyProgress: List<DailyProgressEntry> = emptyList(),
         val wordOfTheDay: WordEntry? = null,
+        val viewedWordIds: Set<String> = emptySet(),
         val learningPace: String = "Обычный",
         val dailyWordGoal: Int = 5,
         val wordsLearnedToday: Int = 0,
@@ -134,6 +136,7 @@ class GamesViewModel(
             is GamesEvent.AnswerTrueFalse -> answerTrueFalse(event.userSaysTrue)
             is GamesEvent.AnswerCompile -> answerCompile(event.assembledWord)
             is GamesEvent.PlayAudio -> playAudio(event.text, event.phonetic)
+            is GamesEvent.MarkWordViewed -> markWordViewed(event.wordId)
             is GamesEvent.NextQuestion -> nextQuestion()
             is GamesEvent.ResetProgress -> resetProgress()
         }
@@ -150,6 +153,7 @@ class GamesViewModel(
                 topErrorWords = repository.getTopErrorWordsForActiveChild(),
                 dailyProgress = dailyProgress,
                 wordOfTheDay = repository.getWordOfTheDay(),
+                viewedWordIds = repository.getViewedWordIdsForActiveChild(),
                 learningPace = learningPaceLabel(goal),
                 dailyWordGoal = goal,
                 wordsLearnedToday = dailyProgress.firstOrNull { it.date == today }?.wordsLearnedCount ?: 0,
@@ -172,6 +176,13 @@ class GamesViewModel(
         viewModelScope.launch {
             if (!settingsRepository.getSettings().soundEnabled) return@launch
             soundPlayer.playPronunciation(text, phonetic)
+        }
+    }
+
+    private fun markWordViewed(wordId: String) {
+        viewModelScope.launch {
+            repository.markWordViewed(wordId)
+            loadStats()
         }
     }
 

@@ -49,8 +49,8 @@ fun HomePage(
     val gamesState by gamesViewModel.state.collectAsState()
     val initialGames = gamesState as? GamesState.Initial
     val wordOfTheDay = initialGames?.wordOfTheDay
-
-    var isWordLearned by remember { mutableStateOf(false) }
+    val viewedWordIds = initialGames?.viewedWordIds.orEmpty()
+    val isWordLearned = wordOfTheDay != null && wordOfTheDay.id in viewedWordIds
 
     LaunchedEffect(Unit) {
         gamesViewModel.loadStats()
@@ -283,7 +283,10 @@ fun HomePage(
 
                             Button(
                                 onClick = {
-                                    isWordLearned = true
+                                    val word = wordOfTheDay
+                                    if (word != null) {
+                                        gamesViewModel.onEvent(GamesEvent.MarkWordViewed(word.id))
+                                    }
                                 },
                                 shape = RoundedCornerShape(100.dp),
                                 colors = ButtonDefaults.buttonColors(

@@ -7,11 +7,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.viewmodel.koinViewModel
+import ru.luxus.votes.features.auth.presentation.AuthEvent
 import ru.luxus.votes.features.auth.presentation.AuthNavHost
 import ru.luxus.votes.features.auth.presentation.AuthViewModel
 import ru.luxus.votes.features.games.presentation.GamesViewModel
@@ -32,6 +34,13 @@ fun AppRoot(
     parentViewModel: ParentViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    // The root restores the persisted session itself, so rehydrate the auth
+    // ViewModel too – otherwise profile screens lose the current user after
+    // an app restart.
+    LaunchedEffect(Unit) {
+        authViewModel.onEvent(AuthEvent.CheckSession)
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
