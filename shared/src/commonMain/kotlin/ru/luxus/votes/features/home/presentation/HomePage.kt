@@ -324,7 +324,6 @@ fun HomePage(
                     title = "1. Обучение",
                     subtitle = "Словарь и карточки слов",
                     emoji = "📚",
-                    badgeColor = UdmurtRed,
                     onClick = onNavigateToLessons,
                     modifier = Modifier.weight(1f)
                 )
@@ -333,7 +332,6 @@ fun HomePage(
                     title = "2. Игры",
                     subtitle = "Все 6 развивающих игр",
                     emoji = "🎮",
-                    badgeColor = UdmurtGold,
                     onClick = onNavigateToGames,
                     modifier = Modifier.weight(1f)
                 )
@@ -349,7 +347,6 @@ fun HomePage(
                     title = "3. Профиль",
                     subtitle = "Кабинет, факты и отчёты",
                     emoji = "👤",
-                    badgeColor = MaterialTheme.colorScheme.primary,
                     onClick = onNavigateToProfile,
                     modifier = Modifier.weight(1f)
                 )
@@ -358,7 +355,6 @@ fun HomePage(
                     title = "4. Настройки",
                     subtitle = "Звук, уведомления и гео",
                     emoji = "⚙️",
-                    badgeColor = MaterialTheme.colorScheme.secondary,
                     onClick = onNavigateToSettings,
                     modifier = Modifier.weight(1f)
                 )
@@ -405,7 +401,6 @@ private fun HomeDashboardCard(
     title: String,
     subtitle: String,
     emoji: String,
-    badgeColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {

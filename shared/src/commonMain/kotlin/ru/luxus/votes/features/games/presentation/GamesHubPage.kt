@@ -103,7 +103,6 @@ fun GamesHubPage(
                 title = "1. Выбери перевод",
                 description = "Выбери правильный русский перевод из 4 вариантов",
                 emoji = "🎯",
-                badge = "Быстрый тест",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("translate"))
                     onNavigateToGame("translate")
@@ -117,7 +116,6 @@ fun GamesHubPage(
                 title = "2. Найди лишнее слово",
                 description = "4 слова на удмуртском: три из одной темы, а одно — лишнее!",
                 emoji = "🔍",
-                badge = "Логика",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("oddoneout"))
                     onNavigateToGame("oddoneout")
@@ -131,7 +129,6 @@ fun GamesHubPage(
                 title = "3. Сортировка",
                 description = "Разложи слова и картинки по категориям в правильные корзины",
                 emoji = "🧺",
-                badge = "Категории",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("sorting"))
                     onNavigateToGame("sorting")
@@ -145,7 +142,6 @@ fun GamesHubPage(
                 title = "4. Найди пару (Memory)",
                 description = "Открывай закрытые карточки и находи пары: слово — перевод",
                 emoji = "🃏",
-                badge = "Память",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("memory"))
                     onNavigateToGame("memory")
@@ -159,7 +155,6 @@ fun GamesHubPage(
                 title = "5. Собери слово",
                 description = "Составь удмуртское слово из перемешанных букв",
                 emoji = "🔤",
-                badge = "Буквы",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("compile"))
                     onNavigateToGame("compile")
@@ -173,7 +168,6 @@ fun GamesHubPage(
                 title = "6. Правда или Ложь",
                 description = "Оцени, верно ли слово соответствует картинке и переводу",
                 emoji = "⚡",
-                badge = "Реакция",
                 onClick = {
                     viewModel.onEvent(GamesEvent.StartGame("truefalse"))
                     onNavigateToGame("truefalse")
@@ -190,7 +184,6 @@ private fun GameModeCard(
     title: String,
     description: String,
     emoji: String,
-    badge: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -217,30 +210,12 @@ private fun GameModeCard(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = UdmurtRed.copy(alpha = 0.12f)
-                    ) {
-                        Text(
-                            text = badge,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = UdmurtRed
-                        )
-                    }
-                }
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
