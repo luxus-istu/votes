@@ -86,8 +86,6 @@ fun OddOneOutPage(
                                 modifier = Modifier.padding(16.dp).fillMaxSize(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(word.emoji, fontSize = 36.sp)
-                                Spacer(modifier = Modifier.width(16.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = word.udmurt,
@@ -138,6 +136,10 @@ fun OddOneOutPage(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        current.previous.oddTarget?.let { target ->
+                            Text(target.emoji, fontSize = 48.sp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                         Text(
                             text = if (current.isCorrect) "🌟 Ӟеч! Ты нашел лишнее слово!" else "❌ Не совсем так!",
                             fontSize = 22.sp,

@@ -86,6 +86,11 @@ interface ChildDao {
     @Query("SELECT wordId FROM ChildLessonProgressTable WHERE childId = :childId")
     suspend fun getChildLessonProgress(childId: String): List<String>
 
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM ChildLessonProgressTable WHERE childId = :childId AND wordId = :wordId)"
+    )
+    suspend fun isChildWordViewed(childId: String, wordId: String): Boolean
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun markChildWordViewed(progress: ChildLessonProgressEntity)
 

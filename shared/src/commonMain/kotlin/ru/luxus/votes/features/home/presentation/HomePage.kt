@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -142,7 +143,9 @@ fun HomePage(
             // Learning pace & today's goal (set by the parent on the dashboard)
             if (initialGames != null) {
                 val goal = initialGames.dailyWordGoal.coerceAtLeast(1)
-                val learnedToday = initialGames.wordsLearnedToday
+                // Never show more than the goal, even if older builds inflated
+                // the stored counter by counting the same word repeatedly.
+                val learnedToday = initialGames.wordsLearnedToday.coerceIn(0, goal)
                 val goalFraction = (learnedToday.toFloat() / goal).coerceIn(0f, 1f)
 
                 Card(
@@ -284,14 +287,17 @@ fun HomePage(
                             Button(
                                 onClick = {
                                     val word = wordOfTheDay
-                                    if (word != null) {
+                                    if (word != null && !isWordLearned) {
                                         gamesViewModel.onEvent(GamesEvent.MarkWordViewed(word.id))
                                     }
                                 },
+                                enabled = !isWordLearned,
                                 shape = RoundedCornerShape(100.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isWordLearned) CorrectGreen else UdmurtGold.copy(alpha = 0.3f),
-                                    contentColor = if (isWordLearned) White else MaterialTheme.colorScheme.onSurface
+                                    containerColor = UdmurtGold.copy(alpha = 0.3f),
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledContainerColor = CorrectGreen,
+                                    disabledContentColor = White
                                 ),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
@@ -314,6 +320,14 @@ fun HomePage(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Нажми на карточку, чтобы открыть раздел",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -409,7 +423,7 @@ private fun HomeDashboardCard(
 ) {
     Card(
         modifier = modifier
-            .height(136.dp)
+            .heightIn(min = 150.dp)
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
@@ -426,6 +440,19 @@ private fun HomeDashboardCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(emoji, fontSize = 30.sp)
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(UdmurtRed.copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Открыть раздел",
+                        tint = UdmurtRed,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
             Column {
                 Text(

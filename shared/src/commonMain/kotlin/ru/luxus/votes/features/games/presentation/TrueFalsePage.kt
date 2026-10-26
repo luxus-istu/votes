@@ -57,8 +57,6 @@ fun TrueFalsePage(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(current.question.emoji, fontSize = 64.sp)
-                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Означает ли слово",
                             fontSize = 16.sp,
@@ -149,6 +147,8 @@ fun TrueFalsePage(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(current.previous.question.emoji, fontSize = 48.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = if (current.isCorrect) "🌟 Ӟеч! Верно!" else "❌ Ошибка!",
                             fontSize = 24.sp,

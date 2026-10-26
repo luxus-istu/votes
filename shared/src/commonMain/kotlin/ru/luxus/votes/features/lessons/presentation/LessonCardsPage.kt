@@ -31,12 +31,9 @@ import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
 import ru.luxus.votes.features.games.domain.WordEntry
+import ru.luxus.votes.features.games.domain.unlockedGameKeys
 import votes.shared.generated.resources.Res
 import votes.shared.generated.resources.mascot_star
-
-private val RANDOM_GAMES = listOf(
-    "translate", "oddoneout", "sorting", "memory", "compile", "truefalse"
-)
 
 @Composable
 fun LessonCardsPage(
@@ -50,6 +47,8 @@ fun LessonCardsPage(
     val loadedState = state as? LessonsState.Loaded
     val categoryWords = loadedState?.groupedWords?.get(topic) ?: emptyList()
     val viewedIds = loadedState?.progress?.viewedWordIds.orEmpty()
+    // Only offer games the child has already unlocked through studying words.
+    val availableGames = unlockedGameKeys(viewedIds.size)
 
     val learnedCount = categoryWords.count { it.id in viewedIds }
     val topicComplete = categoryWords.isNotEmpty() && learnedCount == categoryWords.size
@@ -111,7 +110,11 @@ fun LessonCardsPage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    onTestKnowledge = { onPlayRandomGame(RANDOM_GAMES.random()) },
+                    onTestKnowledge = {
+                        onPlayRandomGame(
+                            availableGames.ifEmpty { listOf("translate") }.random()
+                        )
+                    },
                     onBackToTopics = onBack
                 )
             } else {

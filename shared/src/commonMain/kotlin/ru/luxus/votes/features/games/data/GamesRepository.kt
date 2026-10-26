@@ -330,33 +330,44 @@ class GamesRepository(private val db: AppDatabase) {
     }
 
     suspend fun markWordViewed(wordId: String) = db.withWriteTransaction {
-        lessonProgressDao.markViewed(LessonProgressEntity(wordId))
-
         val today = getTodayDateString()
+        val activeChild = childDao.getActiveChild()
 
-        childDao.getActiveChild()?.let { activeChild ->
+        if (activeChild != null) {
+            // Marking the same word twice (e.g. repeated taps on "Запомнить")
+            // must not inflate the daily goal counter.
+            val alreadyLearned = childDao.isChildWordViewed(activeChild.id, wordId)
             childDao.markChildWordViewed(ChildLessonProgressEntity(activeChild.id, wordId))
 
-            val childDaily = childDao.getChildDailyProgress(activeChild.id, today)
-            childDao.upsertChildDailyProgress(
-                ChildDailyProgressEntity(
-                    childId = activeChild.id,
-                    date = today,
-                    wordsLearnedCount = (childDaily?.wordsLearnedCount ?: 0) + 1,
-                    gamesPlayedCount = childDaily?.gamesPlayedCount ?: 0,
+            if (!alreadyLearned) {
+                val childDaily = childDao.getChildDailyProgress(activeChild.id, today)
+                childDao.upsertChildDailyProgress(
+                    ChildDailyProgressEntity(
+                        childId = activeChild.id,
+                        date = today,
+                        wordsLearnedCount = (childDaily?.wordsLearnedCount ?: 0) + 1,
+                        gamesPlayedCount = childDaily?.gamesPlayedCount ?: 0,
+                    )
                 )
-            )
-        }
+            }
 
-        // Increment device-wide daily words learned (kept for compatibility)
-        val daily = dailyProgressDao.getByDate(today)
-        dailyProgressDao.upsert(
-            DailyProgressEntity(
-                date = today,
-                wordsLearnedCount = (daily?.wordsLearnedCount ?: 0) + 1,
-                gamesPlayedCount = daily?.gamesPlayedCount ?: 0,
-            )
-        )
+            // Keep the legacy device-wide table in sync for older screens.
+            lessonProgressDao.markViewed(LessonProgressEntity(wordId))
+        } else {
+            val alreadyLearned = lessonProgressDao.getViewedWordIds().contains(wordId)
+            lessonProgressDao.markViewed(LessonProgressEntity(wordId))
+
+            if (!alreadyLearned) {
+                val daily = dailyProgressDao.getByDate(today)
+                dailyProgressDao.upsert(
+                    DailyProgressEntity(
+                        date = today,
+                        wordsLearnedCount = (daily?.wordsLearnedCount ?: 0) + 1,
+                        gamesPlayedCount = daily?.gamesPlayedCount ?: 0,
+                    )
+                )
+            }
+        }
     }
 
     suspend fun getTopErrorWords(): List<WordErrorEntry> {
@@ -374,10 +385,13 @@ class GamesRepository(private val db: AppDatabase) {
 
     suspend fun getDailyProgress(): List<DailyProgressEntry> {
         ensureSeeded()
+        // One day can never contain more new words than the child has learned
+        // in total; this also repairs inflated counters from older builds.
+        val learnedTotal = lessonProgressDao.getViewedWordIds().size
         return dailyProgressDao.getRecent().map {
             DailyProgressEntry(
                 date = it.date,
-                wordsLearnedCount = it.wordsLearnedCount,
+                wordsLearnedCount = it.wordsLearnedCount.coerceAtMost(learnedTotal),
                 gamesPlayedCount = it.gamesPlayedCount,
             )
         }
@@ -387,10 +401,11 @@ class GamesRepository(private val db: AppDatabase) {
     suspend fun getDailyProgressForActiveChild(): List<DailyProgressEntry> {
         ensureSeeded()
         val activeChild = childDao.getActiveChild() ?: return getDailyProgress()
+        val learnedTotal = childDao.getChildLessonProgress(activeChild.id).size
         return childDao.getRecentChildDailyProgress(activeChild.id).map {
             DailyProgressEntry(
                 date = it.date,
-                wordsLearnedCount = it.wordsLearnedCount,
+                wordsLearnedCount = it.wordsLearnedCount.coerceAtMost(learnedTotal),
                 gamesPlayedCount = it.gamesPlayedCount,
             )
         }

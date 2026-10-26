@@ -83,8 +83,6 @@ fun SortingGamePage(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(currentItem.emoji, fontSize = 64.sp)
-                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = currentItem.udmurt,
                                 fontSize = 32.sp,

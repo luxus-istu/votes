@@ -58,8 +58,6 @@ fun ChooseTranslationPage(
                         modifier = Modifier.padding(24.dp).fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(current.question.emoji, fontSize = 54.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = current.question.udmurt,
                             fontSize = 30.sp,
@@ -157,6 +155,10 @@ fun ChooseTranslationPage(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // The picture is revealed only now, as a memory aid,
+                        // never while the child is choosing the answer.
+                        Text(current.previous.question.emoji, fontSize = 48.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = if (current.isCorrect) "🌟 Ӟеч! Правильно!" else "❌ Почти получилось!",
                             fontSize = 24.sp,
@@ -164,22 +166,14 @@ fun ChooseTranslationPage(
                             color = if (current.isCorrect) CorrectGreen else IncorrectRed,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = current.correctAnswer,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = current.explanation,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             textAlign = TextAlign.Center
                         )
-                        if (current.explanation.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = current.explanation,
-                                fontSize = 15.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                                textAlign = TextAlign.Center
-                            )
-                        }
                     }
                 }
 

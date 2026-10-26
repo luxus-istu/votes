@@ -70,8 +70,6 @@ fun CompileWordPage(
                         modifier = Modifier.padding(20.dp).fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(current.question.emoji, fontSize = 52.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "«${current.question.russian}»",
                             fontSize = 24.sp,
@@ -255,6 +253,8 @@ fun CompileWordPage(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(current.previous.question.emoji, fontSize = 48.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = if (current.isCorrect) "🌟 Ӟеч! Ты собрал слово!" else "❌ Не совсем правильно",
                             fontSize = 24.sp,
@@ -264,20 +264,12 @@ fun CompileWordPage(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Правильно: «${current.correctAnswer}»",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
+                            text = current.explanation,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                         )
-                        if (current.explanation.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = current.explanation,
-                                fontSize = 15.sp,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                            )
-                        }
                     }
                 }
 

@@ -20,6 +20,9 @@ import ru.luxus.votes.features.settings.data.SettingsRepository
 import ru.luxus.votes.getTodayDateString
 import kotlin.random.Random
 
+private const val ODD_ONE_OUT_ROUNDS = 5
+private const val MEMORY_PAIRS = 4
+
 data class MemoryCard(
     val id: Int,
     val wordId: String,
@@ -121,6 +124,12 @@ class GamesViewModel(
 
     private var currentQuestions: List<WordEntry> = emptyList()
 
+    /** All seeds are valid distractors even when questions use only learned words. */
+    private var answerPool: List<WordEntry> = emptyList()
+
+    /** Category pool for "odd one out" rounds so every round uses the same source. */
+    private var oddOneOutPool: List<WordEntry> = emptyList()
+
     init {
         loadStats()
     }
@@ -191,17 +200,32 @@ class GamesViewModel(
             val allWords = repository.getWords()
             if (allWords.isEmpty()) return@launch
 
+            // Questions come from words the child has already studied whenever
+            // possible; a beginner is never quizzed on unseen vocabulary.
+            val learnedIds = repository.getViewedWordIdsForActiveChild()
+            val familiar = allWords.filter { it.id in learnedIds }
+            answerPool = allWords
+
             when (gameKey) {
-                "memory" -> startMemoryGame(allWords)
-                "sorting" -> startSortingGame(allWords)
-                "oddoneout" -> startOddOneOutGame(allWords)
+                "memory" -> startMemoryGame(if (familiar.size >= 4) familiar else allWords)
+                "sorting" -> startSortingGame(familiar, allWords)
+                "oddoneout" -> startOddOneOutGame(familiar, allWords)
                 "compile" -> {
-                    currentQuestions = allWords.filter { it.udmurt.length in 3..10 && !it.udmurt.contains(" ") }.shuffled().take(8)
-                    if (currentQuestions.isEmpty()) currentQuestions = allWords.take(8)
+                    val source = if (familiar.size >= 4) familiar else allWords
+                    currentQuestions = source
+                        .filter { it.udmurt.length in 3..10 && !it.udmurt.contains(" ") }
+                        .shuffled()
+                        .take(5)
+                    if (currentQuestions.isEmpty()) {
+                        currentQuestions = allWords
+                            .filter { it.udmurt.length in 3..10 && !it.udmurt.contains(" ") }
+                            .take(5)
+                    }
                     emitQuestion(gameKey, 0, 0)
                 }
                 else -> {
-                    currentQuestions = allWords.shuffled().take(10)
+                    val source = if (familiar.isNotEmpty()) familiar else allWords
+                    currentQuestions = source.shuffled().take(6)
                     emitQuestion(gameKey, 0, 0)
                 }
             }
@@ -221,7 +245,11 @@ class GamesViewModel(
         }
 
         val question = currentQuestions[index]
-        val options = buildOptions(gameKey, question, currentQuestions)
+        // "True / False" should pair two studied words, so a beginner can tell
+        // that the shown word really has a different meaning. Other games may
+        // use the full vocabulary as distractors.
+        val optionPool = if (gameKey == "truefalse") currentQuestions else answerPool
+        val options = buildOptions(gameKey, question, optionPool.ifEmpty { currentQuestions })
         val scrambled = if (gameKey == "compile") {
             question.udmurt.replace(" ", "").toCharArray().toList().shuffled()
         } else {
@@ -322,39 +350,41 @@ class GamesViewModel(
 
     // --- GAME 2: Find the Odd One Out (Найди лишнее слово) ---
 
-    private fun startOddOneOutGame(allWords: List<WordEntry>) {
-        val categories = allWords.groupBy { it.category }.filter { it.value.size >= 3 }
-        val categoryKeys = categories.keys.toList().shuffled()
-        if (categoryKeys.size < 2) return
+    private fun startOddOneOutGame(familiar: List<WordEntry>, allWords: List<WordEntry>) {
+        // The three "belonging" words come from a category the child has
+        // already studied; the odd word may be new.
+        val familiarCategories = familiar.groupBy { it.category }.filter { it.value.size >= 3 }
+        oddOneOutPool = if (familiarCategories.isNotEmpty()) familiar else allWords
 
-        currentQuestions = categoryKeys.take(8).mapNotNull { catA ->
-            val otherCat = categoryKeys.firstOrNull { it != catA } ?: return@mapNotNull null
-            val threeFromA = categories[catA]?.shuffled()?.take(3) ?: return@mapNotNull null
-            val oneFromB = categories[otherCat]?.shuffled()?.firstOrNull() ?: return@mapNotNull null
-            oneFromB // target odd word
-        }
-
-        emitOddOneOutQuestion(0, 0, allWords)
+        emitOddOneOutQuestion(0, 0)
     }
 
-    private fun emitOddOneOutQuestion(index: Int, score: Int, allWords: List<WordEntry>) {
-        val categories = allWords.groupBy { it.category }.filter { it.value.size >= 3 }
+    private fun emitOddOneOutQuestion(index: Int, score: Int) {
+        val categories = oddOneOutPool.groupBy { it.category }.filter { it.value.size >= 3 }
         val categoryKeys = categories.keys.toList().shuffled()
 
-        if (index >= 8 || categoryKeys.size < 2) {
+        if (index >= ODD_ONE_OUT_ROUNDS || categoryKeys.isEmpty()) {
             _state.value = GamesState.QuizComplete(
                 score = score,
-                total = 8,
+                total = ODD_ONE_OUT_ROUNDS,
                 gameKey = "oddoneout"
             )
             return
         }
 
         val mainCat = categoryKeys[index % categoryKeys.size]
-        val otherCat = categoryKeys.first { it != mainCat }
 
         val threeWords = categories[mainCat]?.shuffled()?.take(3) ?: emptyList()
-        val oddWord = categories[otherCat]?.shuffled()?.firstOrNull() ?: return
+        val oddWord = answerPool
+            .groupBy { it.category }
+            .filterKeys { it != mainCat }
+            .values
+            .filter { it.isNotEmpty() }
+            .shuffled()
+            .firstOrNull()
+            ?.shuffled()
+            ?.firstOrNull()
+            ?: return
 
         val fourWords = (threeWords + oddWord).shuffled()
 
@@ -365,7 +395,7 @@ class GamesViewModel(
             oddWords = fourWords,
             oddTarget = oddWord,
             currentIndex = index,
-            totalQuestions = 8,
+            totalQuestions = ODD_ONE_OUT_ROUNDS,
             score = score
         )
     }
@@ -395,22 +425,30 @@ class GamesViewModel(
 
     // --- GAME 3: Sorting (Сортировка) ---
 
-    private fun startSortingGame(allWords: List<WordEntry>) {
-        // Pairs of contrasting categories
-        val candidatePairs = listOf(
-            Pair("дикие животные", "домашние животные"),
-            Pair("продукты", "овощи"),
-            Pair("моя семья", "одежда")
-        )
-        val selectedPair = candidatePairs.shuffled().first()
-        val catAWords = allWords.filter { it.category == selectedPair.first }.shuffled().take(4)
-        val catBWords = allWords.filter { it.category == selectedPair.second }.shuffled().take(4)
+    private fun startSortingGame(familiar: List<WordEntry>, allWords: List<WordEntry>) {
+        // Use studied categories when the child already knows at least two of
+        // them; otherwise fall back to the full vocabulary.
+        val familiarCategories = familiar.groupBy { it.category }.filter { it.value.size >= 2 }
+        val source = if (familiarCategories.size >= 2) familiar else allWords
+        val categories = source
+            .groupBy { it.category }
+            .filter { it.value.size >= 2 }
+            .keys
+            .toList()
+            .shuffled()
+
+        if (categories.size < 2) return
+
+        val categoryA = categories[0]
+        val categoryB = categories[1]
+        val catAWords = source.filter { it.category == categoryA }.shuffled().take(3)
+        val catBWords = source.filter { it.category == categoryB }.shuffled().take(3)
 
         val combined = (catAWords + catBWords).shuffled()
 
         _state.value = GamesState.SortingInProgress(
-            categoryA = selectedPair.first,
-            categoryB = selectedPair.second,
+            categoryA = categoryA,
+            categoryB = categoryB,
             items = combined,
             currentItemIndex = 0,
             score = 0,
@@ -454,7 +492,7 @@ class GamesViewModel(
         val selectedWords = allWords
             .shuffled()
             .distinctBy { it.id }
-            .take(6) // 6 pairs = 12 cards
+            .take(MEMORY_PAIRS)
         var cardId = 0
         val cards = mutableListOf<MemoryCard>()
 
@@ -595,9 +633,7 @@ class GamesViewModel(
         val newScore = prev.score + if (answered.isCorrect) 1 else 0
 
         if (prev.gameKey == "oddoneout") {
-            viewModelScope.launch {
-                emitOddOneOutQuestion(nextIndex, newScore, repository.getWords())
-            }
+            emitOddOneOutQuestion(nextIndex, newScore)
         } else {
             emitQuestion(gameKey = prev.gameKey, index = nextIndex, score = newScore)
         }
@@ -620,12 +656,26 @@ class GamesViewModel(
             return if (showCorrect) {
                 listOf(question.udmurt, "true")
             } else {
-                val wrong = pool.filter { it.id != question.id }.shuffled().firstOrNull()?.udmurt ?: "слово"
+                // The wrong word must not share the shown translation, or the
+                // statement would accidentally be true.
+                val wrong = pool
+                    .filter { it.id != question.id && it.russian != question.russian }
+                    .shuffled()
+                    .firstOrNull()
+                    ?.udmurt
+                    ?: "слово"
                 listOf(wrong, "false")
             }
         }
 
-        val distractors = pool.filter { it.id != question.id }.shuffled().take(3).map { it.russian }
-        return (listOf(question.russian) + distractors).shuffled()
+        // Three options are enough for a beginner; duplicate translations of
+        // different Udmurt words would make the question ambiguous.
+        val distractors = pool
+            .filter { it.id != question.id && it.russian != question.russian }
+            .distinctBy { it.russian }
+            .shuffled()
+            .take(2)
+            .map { it.russian }
+        return (listOf(question.russian) + distractors).distinct().shuffled()
     }
 }
