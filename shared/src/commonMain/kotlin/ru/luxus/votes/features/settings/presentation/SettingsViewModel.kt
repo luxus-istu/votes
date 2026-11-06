@@ -6,9 +6,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.Factory
-import ru.luxus.votes.features.settings.data.SettingsRepository
-import ru.luxus.votes.features.settings.domain.SettingsEntity
+import org.koin.core.annotation.KoinViewModel
+import ru.luxus.votes.features.settings.domain.repository.SettingsRepository
+import ru.luxus.votes.features.settings.domain.SettingsModel
 
 sealed interface SettingsEvent {
     data class ToggleSound(val enabled: Boolean) : SettingsEvent
@@ -16,13 +16,13 @@ sealed interface SettingsEvent {
     data class ToggleGeolocation(val enabled: Boolean) : SettingsEvent
 }
 
-@Factory
+@KoinViewModel
 class SettingsViewModel(
     private val repository: SettingsRepository
 ) : ViewModel() {
 
-    private val _settings = MutableStateFlow(SettingsEntity())
-    val settings: StateFlow<SettingsEntity> = _settings.asStateFlow()
+    private val _settings = MutableStateFlow(SettingsModel())
+    val settings: StateFlow<SettingsModel> = _settings.asStateFlow()
 
     init {
         viewModelScope.launch {

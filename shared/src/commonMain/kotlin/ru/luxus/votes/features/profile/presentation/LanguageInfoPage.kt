@@ -3,20 +3,17 @@ package ru.luxus.votes.features.profile.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.QuizScaffold
 
 @Composable
@@ -32,55 +29,47 @@ fun LanguageInfoPage(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Hero card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = UdmurtRed)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Column(modifier = Modifier.padding(22.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(
-                                text = "Удмурт кыл",
-                                color = White,
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Здравствуй, удмуртский язык!",
-                                color = White.copy(alpha = 0.9f),
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Удмурт кыл",
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(
+                        text = "Здравствуй, удмуртский язык!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Один из государственных языков Удмуртской Республики. Приложение создано в рамках государственной программы сохранения и развития языка (Постановление Правительства УР № 748 от 20 ноября 2023 г.).",
-                        color = White.copy(alpha = 0.95f),
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
+                        text = "Удмуртский язык входит в число государственных языков Удмуртской Республики. В 2023 году Правительство Удмуртии приняло программу сохранения и развития удмуртского языка (Постановление Правительства УР № 748 от 20.11.2023).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.95f)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Key facts row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 InfoStatCard(
                     title = "Носители",
-                    value = "~324 000",
-                    subtitle = "говорящих на языке",
+                    value = "324 338",
+                    subtitle = "по переписи 2010 года",
                     modifier = Modifier.weight(1f)
                 )
 
@@ -94,48 +83,57 @@ fun LanguageInfoPage(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Unique Alphabet letters
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = "Уникальные буквы алфавита",
+                        text = "Особые буквы",
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "В удмуртском алфавите 38 букв: 33 русские и 5 особенных букв с двумя точками (диэрезисом):",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        lineHeight = 18.sp
+                        text = "В удмуртском алфавите 38 букв. Пять букв отличаются от русского алфавита. Это ӝ, ӟ, ӥ, ӧ, ӵ.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        AlphabetLetterBadge("Ӝ ӝ", "[дж]", "ӝук (каша)")
-                        AlphabetLetterBadge("Ӟ ӟ", "[дзь]", "ӟеч (добро)")
-                        AlphabetLetterBadge("Ӥ ӥ", "[и]", "одӥг (один)")
-                        AlphabetLetterBadge("Ӧ ӧ", "[о]", "йӧл (молоко)")
-                        AlphabetLetterBadge("Ӵ ӵ", "[тш]", "ӵукна (утро)")
+                        listOf(
+                            "Ӝ ӝ" to "[дж]",
+                            "Ӟ ӟ" to "[дзь]",
+                            "Ӥ ӥ" to "[и]",
+                            "Ӧ ӧ" to "[о]",
+                            "Ӵ ӵ" to "[тш]"
+                        ).forEach { (letter, sound) ->
+                            AlphabetLetterBadge(
+                                letter = letter,
+                                sound = sound,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Interesting facts
             Text(
-                text = "Интересные факты:",
-                fontSize = 18.sp,
+                text = "Факты об Удмуртии и языке",
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -144,32 +142,32 @@ fun LanguageInfoPage(
 
             FactItem(
                 emoji = "🥟",
-                title = "Родина пельменей — Удмуртия",
-                description = "Слово «пельмень» происходит от удмуртских слов «пель» (ухо) и «нянь» (хлеб) — то есть «хлебное ушко»!"
+                title = "Пельмени",
+                description = "Слово «пельмень» пришло из удмуртского языка. «Пель» значит ухо, «нянь» значит хлеб."
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             FactItem(
                 emoji = "☀️",
-                title = "Солярный знак «Толэзё»",
-                description = "Восьмиконечный знак на флаге Удмуртии оберегает от невзгод и олицетворяет солнце, жизнь и бесконечность."
+                title = "Солнце на флаге",
+                description = "На флаге Удмуртии восемь лучей. Это солярный знак, символ солнца."
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             FactItem(
                 emoji = "🌼",
-                title = "Цветок Италмас",
-                description = "Купальница европейская золотисто-жёлтого цвета — символ красоты, любви и вдохновения удмуртского народа."
+                title = "Италмас",
+                description = "Купальница европейская растёт на лугах Удмуртии. В республике её называют италмасом."
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             FactItem(
                 emoji = "🌍",
-                title = "Финно-угорские родственники",
-                description = "Удмуртский язык родственен венгерскому, финскому, эстонскому, коми и марийскому языкам."
+                title = "Родственные языки",
+                description = "Удмуртский язык входит в пермскую ветвь финно-угорских языков. К той же семье относятся коми, марийский, финский, эстонский и венгерский."
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -186,15 +184,30 @@ private fun InfoStatCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(value, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = UdmurtRed)
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
         }
     }
 }
@@ -203,24 +216,35 @@ private fun InfoStatCard(
 private fun AlphabetLetterBadge(
     letter: String,
     sound: String,
-    example: String
+    modifier: Modifier = Modifier
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
-                .background(UdmurtRed.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.small
+                ),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = letter,
-                fontSize = 17.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = UdmurtRed
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
-        Text(sound, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+        Text(
+            text = sound,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -232,28 +256,33 @@ private fun FactItem(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Text(emoji, fontSize = 28.sp)
+            Text(
+                text = emoji,
+                modifier = Modifier.clearAndSetSemantics { },
+                style = MaterialTheme.typography.headlineSmall
+            )
             Spacer(modifier = Modifier.width(14.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                    lineHeight = 17.sp
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

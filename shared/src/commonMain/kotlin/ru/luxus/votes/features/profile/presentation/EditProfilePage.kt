@@ -2,22 +2,21 @@ package ru.luxus.votes.features.profile.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
 import ru.luxus.votes.core.widgets.T2TextField
@@ -30,7 +29,7 @@ fun EditProfilePage(
     authViewModel: AuthViewModel,
     onBack: () -> Unit
 ) {
-    val authState by authViewModel.state.collectAsState()
+    val authState by authViewModel.state.collectAsStateWithLifecycle()
     val user = (authState as? AuthState.Authenticated)?.user
 
     var firstName by remember(user) { mutableStateOf(user?.firstName ?: "") }
@@ -48,41 +47,32 @@ fun EditProfilePage(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Avatar picker
             Text(
-                text = "Выбери аватар-талисман:",
+                text = "Талисман",
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                avatars.take(4).forEach { av ->
-                    AvatarItem(
-                        avatar = av,
-                        isSelected = avatar == av,
-                        onSelect = { avatar = av }
-                    )
+            avatars.chunked(4).forEachIndexed { index, rowAvatars ->
+                if (index > 0) {
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                avatars.drop(4).forEach { av ->
-                    AvatarItem(
-                        avatar = av,
-                        isSelected = avatar == av,
-                        onSelect = { avatar = av }
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    rowAvatars.forEach { av ->
+                        AvatarItem(
+                            avatar = av,
+                            isSelected = avatar == av,
+                            onSelect = { avatar = av },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -118,8 +108,7 @@ fun EditProfilePage(
                     )
                     onBack()
                 },
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = UdmurtRed
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -131,21 +120,42 @@ fun EditProfilePage(
 private fun AvatarItem(
     avatar: String,
     isSelected: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
-            .size(60.dp)
-            .clip(CircleShape)
+        modifier = modifier
+            .heightIn(min = 64.dp)
+            .aspectRatio(1f)
             .background(
-                if (isSelected) UdmurtGold.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                shape = CircleShape
             )
-            .clickable(onClick = onSelect)
             .then(
-                if (isSelected) Modifier.border(3.dp, UdmurtRed, CircleShape) else Modifier
+                if (isSelected) {
+                    Modifier.border(
+                        width = 2.5.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .selectable(
+                selected = isSelected,
+                onClick = onSelect,
+                role = Role.RadioButton
             ),
         contentAlignment = Alignment.Center
     ) {
-        Text(avatar, fontSize = 32.sp)
+        Text(
+            text = avatar,
+            style = MaterialTheme.typography.headlineMedium
+        )
     }
 }
