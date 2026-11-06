@@ -5,13 +5,16 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.Factory
+import org.koin.core.annotation.KoinViewModel
 import ru.luxus.votes.core.sound.SoundPlayer
-import ru.luxus.votes.features.games.data.GamesRepository
+import ru.luxus.votes.features.games.domain.repository.GamesRepository
 import ru.luxus.votes.features.games.domain.WordEntry
 import ru.luxus.votes.features.lessons.domain.LessonProgress
-import ru.luxus.votes.features.settings.data.SettingsRepository
+import ru.luxus.votes.features.lessons.domain.model.UdmurtLetterModel
+import ru.luxus.votes.features.lessons.domain.repository.WordRepository
+import ru.luxus.votes.features.settings.domain.repository.SettingsRepository
 
 sealed interface LessonsEvent {
     data object LoadData : LessonsEvent
@@ -22,16 +25,20 @@ sealed interface LessonsEvent {
 sealed interface LessonsState {
     data object Loading : LessonsState
     data class Loaded(
-        val groupedWords: Map<String, List<WordEntry>>,
-        val progress: LessonProgress
+        val letters: List<UdmurtLetterModel> = emptyList(),
+        val specialLetters: Set<String> = emptySet(),
+        val groupedWords: Map<String, List<WordEntry>> = emptyMap(),
+        val progress: LessonProgress = LessonProgress(),
     ) : LessonsState
+    data class Error(val message: String) : LessonsState
 }
 
-@Factory
+@KoinViewModel
 class LessonsViewModel(
     private val gamesRepository: GamesRepository,
     private val soundPlayer: SoundPlayer,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val wordRepository: WordRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<LessonsState>(LessonsState.Loading)
@@ -51,25 +58,34 @@ class LessonsViewModel(
 
     private fun loadData() {
         viewModelScope.launch {
-            if (_state.value !is LessonsState.Loaded) {
-                _state.value = LessonsState.Loading
-            }
-            val words = gamesRepository.getWords()
-            // Progress is per child, so siblings don't inherit each other's topics
-            val viewedIds = gamesRepository.getViewedWordIdsForActiveChild()
-            val grouped = words.groupBy { it.category }
-            val progress = LessonProgress(viewedWordIds = viewedIds)
+            _state.value = LessonsState.Loading
+            try {
+                val grouped = gamesRepository.getWords().groupBy { it.category }
+                val viewedIds = gamesRepository.getViewedWordIdsForActiveChild()
+                val letters = wordRepository.getAllLetters()
+                val specialLetters = wordRepository.getAllSpecialLetters()
 
-            _state.value = LessonsState.Loaded(groupedWords = grouped, progress = progress)
+                _state.value = LessonsState.Loaded(
+                    letters = letters,
+                    specialLetters = specialLetters,
+                    groupedWords = grouped,
+                    progress = LessonProgress(viewedIds),
+                )
+            } catch (e: Exception) {
+                _state.value = LessonsState.Error(e.message ?: "Не удалось загрузить слова")
+            }
         }
     }
 
     private fun markWordViewed(wordId: String) {
-        val current = _state.value as? LessonsState.Loaded ?: return
-        val newProgress = current.progress.copyWithViewed(wordId)
-        _state.value = current.copy(progress = newProgress)
-
         viewModelScope.launch {
+            // Optimistic update so the checkmark appears instantly on the card
+            _state.update { current ->
+                (current as? LessonsState.Loaded)?.copy(
+                    progress = current.progress.copyWithViewed(wordId)
+                ) ?: current
+            }
+
             gamesRepository.markWordViewed(wordId)
             if (settingsRepository.getSettings().soundEnabled) {
                 soundPlayer.playSuccess()
