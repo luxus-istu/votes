@@ -16,6 +16,7 @@ captures/
 *.aab
 *.apk
 output-metadata.json
+androidApp/release/
 
 # IntelliJ
 *.iml
@@ -27,6 +28,7 @@ render.experimental.xml
 # Keystore files
 *.jks
 *.keystore
+release-key
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
