@@ -151,6 +151,17 @@ fun SortingGamePage(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = currentItem?.udmurt ?: "",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Two destination category buckets
