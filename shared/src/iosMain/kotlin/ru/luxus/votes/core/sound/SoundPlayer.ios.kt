@@ -13,8 +13,11 @@ actual class SoundPlayer {
         AVSpeechSynthesisVoice.voiceWithLanguage("ru-RU")
 
     actual fun playPronunciation(text: String, phonetic: String) {
-        if (text.isBlank()) return
-        val utterance = AVSpeechUtterance(string = text).apply {
+        // A Russian voice cannot read Udmurt-specific letters (ӝ, ӟ, ӥ, ӧ, ӵ),
+        // so the stored transcription is spoken instead, exactly as recorded.
+        val speech = spokenText(text, phonetic)
+        if (speech.isBlank()) return
+        val utterance = AVSpeechUtterance(string = speech).apply {
             russianVoice?.let { voice = it }
             rate = 0.45f
         }
