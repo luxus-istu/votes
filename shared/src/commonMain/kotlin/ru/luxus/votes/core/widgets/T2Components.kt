@@ -13,17 +13,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.Magenta
-import ru.luxus.votes.core.theme.White
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun T2Button(
@@ -31,8 +35,8 @@ fun T2Button(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    containerColor: Color = Magenta,
-    contentColor: Color = White
+    containerColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary
 ) {
     Button(
         onClick = onClick,
@@ -48,11 +52,8 @@ fun T2Button(
         )
     ) {
         Text(
-            text = text.uppercase(),
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp,
-            letterSpacing = 1.sp,
-            lineHeight = 20.sp,
+            text = text,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             textAlign = TextAlign.Center
         )
     }
@@ -74,11 +75,15 @@ fun T2TextField(
         modifier = modifier.fillMaxWidth(),
         singleLine = true,
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-        keyboardOptions = keyboardOptions,
-        shape = RoundedCornerShape(16.dp),
+        keyboardOptions = if (isPassword) {
+            keyboardOptions.copy(keyboardType = KeyboardType.Password)
+        } else {
+            keyboardOptions
+        },
+        shape = MaterialTheme.shapes.medium,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Magenta,
-            focusedLabelColor = Magenta
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            focusedLabelColor = MaterialTheme.colorScheme.primary
         )
     )
 }
@@ -109,19 +114,29 @@ fun QuizScaffold(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
         modifier = modifier
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            content = content
-        )
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            // Keep readable line lengths on tablets and foldables while
+            // preserving full-width layouts on phones.
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = 600.dp)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
     }
 }
 
@@ -130,8 +145,16 @@ fun T2TopSnackBar(
     message: String?,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Magenta
+    backgroundColor: Color = MaterialTheme.colorScheme.error,
+    contentColor: Color = MaterialTheme.colorScheme.onError
 ) {
+    LaunchedEffect(message) {
+        if (!message.isNullOrEmpty()) {
+            delay(5_000.milliseconds)
+            onDismiss()
+        }
+    }
+
     AnimatedVisibility(
         visible = !message.isNullOrEmpty(),
         enter = slideInVertically() + fadeIn(),
@@ -143,15 +166,15 @@ fun T2TopSnackBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .background(backgroundColor, RoundedCornerShape(16.dp))
+                    .background(backgroundColor, MaterialTheme.shapes.medium)
+                    .semantics { liveRegion = LiveRegionMode.Polite }
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = message,
-                    color = White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    color = contentColor,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     textAlign = TextAlign.Center
                 )
             }
