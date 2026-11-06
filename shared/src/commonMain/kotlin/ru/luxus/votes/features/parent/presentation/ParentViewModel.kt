@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.Single
+import org.koin.core.annotation.KoinViewModel
 import ru.luxus.votes.core.sound.SoundPlayer
-import ru.luxus.votes.features.auth.data.AuthRepository
-import ru.luxus.votes.features.parent.data.ParentRepository
+import ru.luxus.votes.features.auth.domain.repository.AuthRepository
+import ru.luxus.votes.features.parent.domain.repository.ParentRepository
 import ru.luxus.votes.features.parent.domain.ChildProfileModel
 import ru.luxus.votes.features.parent.domain.learningPaceLabel
 
@@ -63,7 +63,7 @@ sealed interface ParentEvent {
     data object ConsumeFormSaved : ParentEvent
 }
 
-@Single
+@KoinViewModel
 class ParentViewModel(
     private val repository: ParentRepository,
     private val authRepository: AuthRepository,
@@ -111,7 +111,7 @@ class ParentViewModel(
                 viewModelScope.launch {
                     if (repository.isChildEmailTaken(event.childEmail)) {
                         _state.update {
-                            it.copy(notification = "Этот email уже используется другим профилем")
+                            it.copy(notification = "Этот email уже занят другим профилем")
                         }
                         soundPlayer.playError()
                         return@launch
@@ -136,7 +136,7 @@ class ParentViewModel(
                 viewModelScope.launch {
                     if (repository.isChildEmailTaken(event.childEmail, excludeChildId = event.id)) {
                         _state.update {
-                            it.copy(notification = "Этот email уже используется другим профилем")
+                            it.copy(notification = "Этот email уже занят другим профилем")
                         }
                         soundPlayer.playError()
                         return@launch
@@ -181,9 +181,9 @@ class ParentViewModel(
             "translate" to "Выбери перевод",
             "oddoneout" to "Найди лишнее слово",
             "sorting" to "Сортировка",
-            "memory" to "Найди пару (Memory)",
+            "memory" to "Найди пару",
             "compile" to "Собери слово",
-            "truefalse" to "Правда / Ложь"
+            "truefalse" to "Правда или ложь"
         )
 
         val gamesText = child.gameStatsMap.entries.joinToString("\n") { (key, pair) ->
@@ -193,35 +193,36 @@ class ParentViewModel(
         }
 
         val errorsText = if (child.topErrors.isNotEmpty()) {
-            child.topErrors.take(5).joinToString(", ") { "${it.udmurt} (${it.russian}): ${it.errorCount} ош." }
+            child.topErrors.take(5).joinToString(", ") {
+                "${it.udmurt} (${it.russian}), ошибок: ${it.errorCount}"
+            }
         } else {
-            "Трудностей не зафиксировано, материал усваивается уверенно"
+            "Ошибок пока нет"
         }
 
         val masteryPct = if (child.totalWordsAvailable > 0) (child.wordsLearnedCount * 100 / child.totalWordsAvailable) else 0
 
         return """
-УЧЕБНЫЙ ОТЧЁТ ПО УДМУРТСКОМУ ЯЗЫКУ
-Приложение: «Ӟеч-а бур-а удмурт кыл?»
-Программа: Сохранение и развитие удмуртского языка (Постановление № 748)
+Отчёт об обучении удмуртскому языку
+Приложение «Ӟеч-а бур-а удмурт кыл?»
 
 Ученик: ${listOf(child.name, child.lastName).filter { it.isNotBlank() }.joinToString(" ")} (${child.age} лет, талисман: ${child.avatar})
 Дата рождения: ${child.birthDate.ifBlank { "не указана" }}
 Темп обучения: ${learningPaceLabel(child.targetWordsPerDay).lowercase()}
 Дата регистрации: ${child.createdAt}
 
-ОСВОЕНИЕ ПРОГРАММЫ (1-Й ЭТАП):
-  • Изучено слов: ${child.wordsLearnedCount} из ${child.totalWordsAvailable} ($masteryPct%)
-  • Общая точность ответов: ${(child.accuracy * 100).toInt()}% (${child.totalCorrect} из ${child.totalAnswered})
+Освоение программы
+Изучено слов: ${child.wordsLearnedCount} из ${child.totalWordsAvailable} ($masteryPct%)
+Точность ответов: ${(child.accuracy * 100).toInt()}% (${child.totalCorrect} из ${child.totalAnswered})
 
-РЕЗУЛЬТАТЫ ПО МИНИ-ИГРАМ:
+Результаты по играм
 $gamesText
 
-СЛОВА ДЛЯ ДОПОЛНИТЕЛЬНОГО ПОВТОРЕНИЯ:
-  $errorsText
+Слова для повторения
+$errorsText
 
-МЕТОДИЧЕСКАЯ РЕКОМЕНДАЦИЯ РОДИТЕЛЮ И УЧИТЕЛЮ:
-  Ребёнку рекомендуется закрепить удмуртские буквы (ӝ, ӟ, ӥ, ӧ, ӵ) и уделить 5-10 минут игре «Собери слово» и «Сортировка».
+Рекомендация
+Повторите с ребёнком буквы ӝ, ӟ, ӥ, ӧ, ӵ и поиграйте от 5 до 10 минут в «Собери слово» и «Сортировку».
         """.trimIndent()
     }
 }

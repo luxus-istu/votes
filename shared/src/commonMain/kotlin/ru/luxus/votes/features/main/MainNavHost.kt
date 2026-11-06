@@ -3,8 +3,6 @@ package ru.luxus.votes.features.main
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -31,6 +29,7 @@ import ru.luxus.votes.features.lessons.presentation.LessonsTopicsPage
 import ru.luxus.votes.features.lessons.presentation.LessonsViewModel
 import ru.luxus.votes.features.parent.presentation.ChildFormPage
 import ru.luxus.votes.features.parent.presentation.ParentDashboardPage
+import ru.luxus.votes.features.parent.presentation.ParentTopicsPage
 import ru.luxus.votes.features.parent.presentation.ParentViewModel
 import ru.luxus.votes.features.profile.presentation.EditProfilePage
 import ru.luxus.votes.features.profile.presentation.LanguageInfoPage
@@ -53,6 +52,7 @@ import ru.luxus.votes.navigation.MemoryGameRoute
 import ru.luxus.votes.navigation.OddOneOutRoute
 import ru.luxus.votes.navigation.ParentDashboardRoute
 import ru.luxus.votes.navigation.ParentReportRoute
+import ru.luxus.votes.navigation.ParentTopicsRoute
 import ru.luxus.votes.navigation.ProfileRoute
 import ru.luxus.votes.navigation.SettingsRoute
 import ru.luxus.votes.navigation.SortingGameRoute
@@ -235,7 +235,16 @@ fun MainNavHost(
                 viewModel = parentViewModel,
                 onLogout = { authViewModel.onEvent(AuthEvent.Logout) },
                 onAddChild = { navController.navigate(ChildFormRoute()) },
-                onEditChild = { childId -> navController.navigate(ChildFormRoute(childId)) }
+                onEditChild = { childId -> navController.navigate(ChildFormRoute(childId)) },
+                onOpenAllTopics = { navController.navigate(ParentTopicsRoute) }
+            )
+        }
+
+        // All study topics of the selected child
+        composable<ParentTopicsRoute> {
+            ParentTopicsPage(
+                viewModel = parentViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 
