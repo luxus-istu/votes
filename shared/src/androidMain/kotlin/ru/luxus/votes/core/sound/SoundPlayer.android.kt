@@ -112,18 +112,19 @@ actual class SoundPlayer {
     }
 
     actual fun playPronunciation(text: String, phonetic: String) {
-        if (text.isBlank()) return
+        val speech = spokenText(text, phonetic)
+        if (speech.isBlank()) return
 
         val tts = textToSpeech
         if (tts == null || !speechReady) {
             // Engine not ready yet: remember only the newest request and make sure
             // engine startup is running.
-            pendingSpeech = text
+            pendingSpeech = speech
             if (tts == null) createEngine()
             return
         }
 
-        speak(tts, text)
+        speak(tts, speech)
     }
 
     private fun speak(tts: TextToSpeech, text: String) {

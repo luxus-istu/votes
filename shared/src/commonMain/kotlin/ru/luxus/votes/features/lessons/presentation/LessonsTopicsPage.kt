@@ -1,24 +1,24 @@
 package ru.luxus.votes.features.lessons.presentation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.luxus.votes.core.widgets.QuizScaffold
 
 @Composable
@@ -28,7 +28,7 @@ fun LessonsTopicsPage(
     onOpenAlphabet: () -> Unit,
     onBack: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     // Reload on every visit: the ViewModel is shared across sessions, so a new
     // child must never see the previous child's topic progress
@@ -37,25 +37,37 @@ fun LessonsTopicsPage(
     }
 
     QuizScaffold(
-        title = "Словарь и Уроки",
+        title = "Словарь",
         onBack = onBack
     ) {
         when (val current = state) {
             is LessonsState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = UdmurtRed)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            }
+
+            is LessonsState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = current.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
 
             is LessonsState.Loaded -> {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .clickable(onClick = onOpenAlphabet),
-                    shape = RoundedCornerShape(18.dp),
+                    onClick = onOpenAlphabet,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.cardColors(
-                        containerColor = UdmurtGold.copy(alpha = 0.16f)
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
                     )
                 ) {
                     Row(
@@ -65,90 +77,111 @@ fun LessonsTopicsPage(
                         Box(
                             modifier = Modifier
                                 .size(54.dp)
-                                .background(UdmurtGold.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                                .background(
+                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.22f),
+                                    MaterialTheme.shapes.medium
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Ӟ", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = UdmurtRed)
+                            Text(
+                                text = "Ӟ",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Удмуртский алфавит",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Text(
-                                text = "38 букв, включая ӝ, ӟ, ӥ, ӧ, ӵ — с озвучкой",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                text = "38 букв, включая ӝ, ӟ, ӥ, ӧ, ӵ. Нажми на букву, чтобы услышать звук.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
                             )
                         }
-                        Text("→", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = UdmurtRed)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Темы для изучения:",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
+                Text(
+                    text = "Темы",
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
-                    items(current.groupedWords.keys.toList()) { category ->
+                    items(
+                        items = current.groupedWords.keys.toList(),
+                        key = { it }
+                    ) { category ->
                         val wordsInCategory = current.groupedWords[category] ?: emptyList()
                         val viewedCount = wordsInCategory.count { current.progress.viewedWordIds.contains(it.id) }
                         val firstEmoji = wordsInCategory.firstOrNull()?.emoji ?: "📖"
 
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(18.dp))
-                                .clickable { onTopicSelected(category) },
-                            shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            onClick = { onTopicSelected(category) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(firstEmoji, fontSize = 32.sp)
+                                    Text(firstEmoji, style = MaterialTheme.typography.headlineMedium)
                                     Spacer(modifier = Modifier.width(14.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = category.replaceFirstChar { it.uppercase() },
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 17.sp,
+                                            style = MaterialTheme.typography.titleMedium,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "$viewedCount из ${wordsInCategory.size} слов изучено",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 LinearProgressIndicator(
-                                    progress = { if (wordsInCategory.isEmpty()) 0f else viewedCount.toFloat() / wordsInCategory.size },
-                                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                                    color = UdmurtRed,
-                                    trackColor = UdmurtRed.copy(alpha = 0.15f)
+                                    progress = {
+                                        if (wordsInCategory.isEmpty()) 0f
+                                        else viewedCount.toFloat() / wordsInCategory.size
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(MaterialTheme.shapes.extraSmall),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                 )
                             }
                         }

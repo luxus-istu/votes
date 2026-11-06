@@ -7,21 +7,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.Factory
+import org.koin.core.annotation.KoinViewModel
 import ru.luxus.votes.core.sound.SoundPlayer
-import ru.luxus.votes.features.games.data.GamesRepository
+import ru.luxus.votes.features.games.domain.repository.GamesRepository
 import ru.luxus.votes.features.games.domain.DailyProgressEntry
 import ru.luxus.votes.features.games.domain.GameStats
 import ru.luxus.votes.features.games.domain.WordEntry
 import ru.luxus.votes.features.games.domain.WordErrorEntry
-import ru.luxus.votes.features.parent.data.ParentRepository
+import ru.luxus.votes.features.parent.domain.repository.ParentRepository
 import ru.luxus.votes.features.parent.domain.learningPaceLabel
-import ru.luxus.votes.features.settings.data.SettingsRepository
-import ru.luxus.votes.getTodayDateString
+import ru.luxus.votes.features.settings.domain.repository.SettingsRepository
+import ru.luxus.votes.core.datetime.getTodayDateString
 import kotlin.random.Random
 
 private const val ODD_ONE_OUT_ROUNDS = 5
-private const val MEMORY_PAIRS = 4
+private const val MEMORY_PAIRS = 6 // 6 pairs = 12 cards
 
 data class MemoryCard(
     val id: Int,
@@ -30,9 +30,13 @@ data class MemoryCard(
     val subtext: String = "",
     val emoji: String = "",
     val isFlipped: Boolean = false,
-    val isMatched: Boolean = false,
-    /** 0 = Udmurt word side, 1 = Russian translation side */
-    val face: Int = 0
+    val isMatched: Boolean = false
+)
+
+/** Options of a quiz question plus the transcript of the word shown to the child. */
+private data class BuiltOptions(
+    val options: List<String>,
+    val shownTranscription: String = "",
 )
 
 sealed interface GamesEvent {
@@ -67,6 +71,12 @@ sealed interface GamesState {
         val gameKey: String,
         val question: WordEntry,
         val options: List<String>,
+        /**
+         * Transcription of the word the child actually sees. In "Правда или
+         * ложь" the shown word may be a decoy, so its transcript must not be
+         * taken from [question].
+         */
+        val shownTranscription: String = "",
         val oddWords: List<WordEntry> = emptyList(),
         val oddTarget: WordEntry? = null,
         val scrambledLetters: List<Char> = emptyList(),
@@ -84,7 +94,8 @@ sealed interface GamesState {
         val currentItemIndex: Int,
         val score: Int,
         val total: Int,
-        val lastFeedback: String? = null
+        val lastFeedback: String? = null,
+        val lastWasCorrect: Boolean? = null
     ) : GamesState
 
     data class MemoryInProgress(
@@ -111,7 +122,7 @@ sealed interface GamesState {
     ) : GamesState
 }
 
-@Factory
+@KoinViewModel
 class GamesViewModel(
     private val repository: GamesRepository,
     private val parentRepository: ParentRepository,
@@ -151,7 +162,7 @@ class GamesViewModel(
         }
     }
 
-    fun loadStats() {
+    private fun loadStats() {
         viewModelScope.launch {
             val dailyProgress = repository.getDailyProgressForActiveChild()
             val activeChild = parentRepository.getActiveChild()
@@ -207,7 +218,7 @@ class GamesViewModel(
             answerPool = allWords
 
             when (gameKey) {
-                "memory" -> startMemoryGame(if (familiar.size >= 4) familiar else allWords)
+                "memory" -> startMemoryGame(familiar, allWords)
                 "sorting" -> startSortingGame(familiar, allWords)
                 "oddoneout" -> startOddOneOutGame(familiar, allWords)
                 "compile" -> {
@@ -249,7 +260,7 @@ class GamesViewModel(
         // that the shown word really has a different meaning. Other games may
         // use the full vocabulary as distractors.
         val optionPool = if (gameKey == "truefalse") currentQuestions else answerPool
-        val options = buildOptions(gameKey, question, optionPool.ifEmpty { currentQuestions })
+        val builtOptions = buildOptions(gameKey, question, optionPool.ifEmpty { currentQuestions })
         val scrambled = if (gameKey == "compile") {
             question.udmurt.replace(" ", "").toCharArray().toList().shuffled()
         } else {
@@ -259,7 +270,8 @@ class GamesViewModel(
         _state.value = GamesState.QuizInProgress(
             gameKey = gameKey,
             question = question,
-            options = options,
+            options = builtOptions.options,
+            shownTranscription = builtOptions.shownTranscription,
             scrambledLetters = scrambled,
             currentIndex = index,
             totalQuestions = currentQuestions.size,
@@ -293,9 +305,9 @@ class GamesViewModel(
         if (isCorrect) playSound("success") else playSound("error")
 
         val explanation = if (isActuallyCorrect) {
-            "✓ Верно! «${current.question.udmurt}» действительно означает «${current.question.russian}»"
+            "Верно. «${current.question.udmurt}» означает «${current.question.russian}»"
         } else {
-            "✗ На самом деле «${current.question.udmurt}» — это «${current.question.russian}»"
+            "На самом деле «${current.question.udmurt}» означает «${current.question.russian}»"
         }
 
         _state.value = GamesState.QuizAnswered(
@@ -340,9 +352,9 @@ class GamesViewModel(
             _state.value = current.copy(
                 hintLevel = nextHint,
                 feedback = if (nextHint == 1) {
-                    "Не совсем! Открыли первую треть слова."
+                    "Не совсем. Открыли первую треть слова."
                 } else {
-                    "Попробуй ещё — открыли две трети слова."
+                    "Попробуй ещё. Открыли две трети слова."
                 }
             )
         }
@@ -410,9 +422,9 @@ class GamesViewModel(
         if (isCorrect) playSound("success") else playSound("error")
 
         val explanation = if (isCorrect) {
-            "🎉 Отлично! «${target.udmurt}» (${target.russian}) относится к теме «${target.category}», а остальные слова — к другой теме!"
+            "Верно. «${target.udmurt}» (${target.russian}) относится к теме «${target.category}». Остальные слова из других тем."
         } else {
-            "Лишнее слово — «${target.udmurt}» (${target.russian}), так как оно относится к категории «${target.category}»!"
+            "«${target.udmurt}» (${target.russian}) лишнее, потому что относится к теме «${target.category}»."
         }
 
         _state.value = GamesState.QuizAnswered(
@@ -480,49 +492,51 @@ class GamesViewModel(
             _state.value = current.copy(
                 currentItemIndex = nextIndex,
                 score = newScore,
-                lastFeedback = if (isCorrect) "✓ Верно!" else "✗ «${item.udmurt}» относится к: ${item.category}"
+                lastFeedback = if (isCorrect) "Верно!" else "«${item.udmurt}» относится к категории «${item.category}»",
+                lastWasCorrect = isCorrect
             )
         }
     }
 
     // --- GAME 4: Memory (Найди пару) ---
 
-    private fun startMemoryGame(allWords: List<WordEntry>) {
-        // Unique words only, so every pair is guaranteed to have two different faces
-        val selectedWords = allWords
-            .shuffled()
+    private fun startMemoryGame(familiar: List<WordEntry>, allWords: List<WordEntry>) {
+        // Classic memory board: a pair is two IDENTICAL cards of the same
+        // word («куать» + «куать»), never a word mixed with its translation.
+        // Phrases do not fit on a card, so only single words are dealt. The
+        // Udmurt spelling must also be unique on the board: two look-alike
+        // cards from different entries would read as a pair yet be rejected.
+        // Studied words fill the board first; the rest of the vocabulary
+        // completes the full 12-card set.
+        fun fitsOnCard(word: WordEntry) =
+            word.udmurt.isNotBlank() && !word.udmurt.contains(" ")
+
+        val familiarIds = familiar.map { it.id }.toSet()
+        val studiedFirst =
+            familiar.filter { fitsOnCard(it) }.shuffled() +
+                allWords.filter { it.id !in familiarIds && fitsOnCard(it) }.shuffled()
+        val selectedWords = studiedFirst
             .distinctBy { it.id }
+            .distinctBy { it.udmurt.trim().lowercase() }
             .take(MEMORY_PAIRS)
         var cardId = 0
         val cards = mutableListOf<MemoryCard>()
 
         selectedWords.forEach { word ->
-            // Card 1: Udmurt word
-            cards.add(
-                MemoryCard(
-                    id = cardId++,
-                    wordId = word.id,
-                    text = word.udmurt,
-                    subtext = word.transcription,
-                    emoji = "📖",
-                    isFlipped = false,
-                    isMatched = false,
-                    face = 0
+            // Each word is dealt twice as two identical cards
+            repeat(2) {
+                cards.add(
+                    MemoryCard(
+                        id = cardId++,
+                        wordId = word.id,
+                        text = word.udmurt,
+                        subtext = word.transcription,
+                        emoji = word.emoji,
+                        isFlipped = false,
+                        isMatched = false
+                    )
                 )
-            )
-            // Card 2: Russian translation + Emoji
-            cards.add(
-                MemoryCard(
-                    id = cardId++,
-                    wordId = word.id,
-                    text = word.russian,
-                    subtext = "",
-                    emoji = word.emoji,
-                    isFlipped = false,
-                    isMatched = false,
-                    face = 1
-                )
-            )
+            }
         }
 
         _state.value = GamesState.MemoryInProgress(
@@ -565,11 +579,9 @@ class GamesViewModel(
         val secondCard = updatedCards[secondIdx]
         val newMoves = current.moves + 1
 
-        // A pair is valid only when both cards reference the same word AND show
-        // opposite faces (Udmurt word side + Russian translation side).
+        // A pair is two identical cards of the same word.
         val isMatch = firstCard.id != secondCard.id &&
-            firstCard.wordId == secondCard.wordId &&
-            firstCard.face != secondCard.face
+            firstCard.wordId == secondCard.wordId
 
         if (isMatch) {
             playSound("success")
@@ -650,21 +662,29 @@ class GamesViewModel(
         gameKey: String,
         question: WordEntry,
         pool: List<WordEntry>
-    ): List<String> {
+    ): BuiltOptions {
         if (gameKey == "truefalse") {
             val showCorrect = Random.nextBoolean()
-            return if (showCorrect) {
-                listOf(question.udmurt, "true")
+            if (showCorrect) {
+                return BuiltOptions(
+                    options = listOf(question.udmurt, "true"),
+                    shownTranscription = question.transcription
+                )
+            }
+            // The wrong word must not share the shown translation, or the
+            // statement would accidentally be true. Its own transcription is
+            // kept so the child hears exactly the word shown on screen.
+            val wrong = pool
+                .filter { it.id != question.id && it.russian != question.russian }
+                .shuffled()
+                .firstOrNull()
+            return if (wrong != null) {
+                BuiltOptions(
+                    options = listOf(wrong.udmurt, "false"),
+                    shownTranscription = wrong.transcription
+                )
             } else {
-                // The wrong word must not share the shown translation, or the
-                // statement would accidentally be true.
-                val wrong = pool
-                    .filter { it.id != question.id && it.russian != question.russian }
-                    .shuffled()
-                    .firstOrNull()
-                    ?.udmurt
-                    ?: "слово"
-                listOf(wrong, "false")
+                BuiltOptions(options = listOf("слово", "false"))
             }
         }
 
@@ -676,6 +696,6 @@ class GamesViewModel(
             .shuffled()
             .take(2)
             .map { it.russian }
-        return (listOf(question.russian) + distractors).distinct().shuffled()
+        return BuiltOptions(options = (listOf(question.russian) + distractors).distinct().shuffled())
     }
 }

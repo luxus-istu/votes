@@ -2,25 +2,20 @@ package ru.luxus.votes.features.games.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.CorrectGreen
-import ru.luxus.votes.core.theme.IncorrectRed
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.luxus.votes.core.theme.LocalExtendedColors
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
 
@@ -30,76 +25,91 @@ fun TrueFalsePage(
     onGameComplete: () -> Unit,
     onBack: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val extended = LocalExtendedColors.current
 
     when (val current = state) {
         is GamesState.QuizInProgress -> {
             QuizScaffold(
-                title = "Правда или Ложь (${current.currentIndex + 1}/${current.totalQuestions})",
+                title = "Правда или ложь (${current.currentIndex + 1}/${current.totalQuestions})",
                 onBack = onBack
             ) {
                 LinearProgressIndicator(
-                    progress = { (current.currentIndex + 1).toFloat() / current.totalQuestions },
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                    color = UdmurtRed,
-                    trackColor = UdmurtRed.copy(alpha = 0.2f)
+                    progress = {
+                        (current.currentIndex + 1).toFloat() / current.totalQuestions
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Column(
-                        modifier = Modifier.padding(24.dp).fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Означает ли слово",
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            text = "Верно ли, что",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "«${current.options[0]}»",
-                            fontSize = 32.sp,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
-                            color = UdmurtRed,
+                            color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Center
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        IconButton(
+                        FilledTonalIconButton(
                             onClick = {
+                                // The shown word may be a decoy in "false"
+                                // statements, so pair it with its own transcript.
                                 viewModel.onEvent(
                                     GamesEvent.PlayAudio(
                                         current.options[0],
-                                        current.question.transcription
+                                        current.shownTranscription
                                     )
                                 )
                             },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(UdmurtGold.copy(alpha = 0.25f), CircleShape)
+                            modifier = Modifier.size(52.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.VolumeUp,
                                 contentDescription = "Прослушать",
-                                tint = UdmurtRed,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(24.dp)
                             )
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "перевод: «${current.question.russian}»?",
-                            fontSize = 22.sp,
+                            text = "означает «${current.question.russian}»?",
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
@@ -114,17 +124,19 @@ fun TrueFalsePage(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     T2Button(
-                        text = "Ложь ❌",
+                        text = "Неверно",
                         onClick = { viewModel.onEvent(GamesEvent.AnswerTrueFalse(false)) },
                         modifier = Modifier.weight(1f),
-                        containerColor = IncorrectRed
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
                     )
 
                     T2Button(
-                        text = "Правда ✅",
+                        text = "Верно",
                         onClick = { viewModel.onEvent(GamesEvent.AnswerTrueFalse(true)) },
                         modifier = Modifier.weight(1f),
-                        containerColor = CorrectGreen
+                        containerColor = extended.success,
+                        contentColor = extended.onSuccess
                     )
                 }
             }
@@ -135,34 +147,51 @@ fun TrueFalsePage(
                 title = "Результат ответа",
                 onBack = onBack
             ) {
+                val container = if (current.isCorrect) {
+                    extended.successContainer
+                } else {
+                    MaterialTheme.colorScheme.errorContainer
+                }
+                val onContainer = if (current.isCorrect) {
+                    extended.onSuccessContainer
+                } else {
+                    MaterialTheme.colorScheme.onErrorContainer
+                }
+                val accent = if (current.isCorrect) {
+                    extended.success
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .background(
-                            if (current.isCorrect) CorrectGreen.copy(alpha = 0.15f) else IncorrectRed.copy(alpha = 0.15f),
-                            RoundedCornerShape(24.dp)
-                        )
+                        .background(container, MaterialTheme.shapes.extraLarge)
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(current.previous.question.emoji, fontSize = 48.sp)
+                        Text(
+                            text = current.previous.question.emoji,
+                            modifier = Modifier.clearAndSetSemantics { },
+                            fontSize = 48.sp
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = if (current.isCorrect) "🌟 Ӟеч! Верно!" else "❌ Ошибка!",
-                            fontSize = 24.sp,
+                            text = if (current.isCorrect) "Ӟеч! Верно." else "Неверно.",
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (current.isCorrect) CorrectGreen else IncorrectRed,
+                            color = accent,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = current.correctAnswer,
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = onContainer.copy(alpha = 0.9f)
                         )
                     }
                 }
@@ -172,8 +201,7 @@ fun TrueFalsePage(
                 T2Button(
                     text = "Следующий вопрос",
                     onClick = { viewModel.onEvent(GamesEvent.NextQuestion) },
-                    modifier = Modifier.fillMaxWidth(),
-                    containerColor = UdmurtRed
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

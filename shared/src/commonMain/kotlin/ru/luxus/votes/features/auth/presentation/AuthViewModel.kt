@@ -6,10 +6,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.Factory
-import ru.luxus.votes.features.auth.data.AuthRepository
-import ru.luxus.votes.features.auth.data.SessionRepository
-import ru.luxus.votes.features.auth.domain.UserEntity
+import org.koin.core.annotation.KoinViewModel
+import ru.luxus.votes.features.auth.domain.repository.AuthRepository
+import ru.luxus.votes.features.auth.domain.repository.SessionRepository
+import ru.luxus.votes.features.auth.domain.UserModel
 
 sealed interface AuthEvent {
     data object CheckSession : AuthEvent
@@ -36,11 +36,11 @@ sealed interface AuthEvent {
 sealed interface AuthState {
     data object Initial : AuthState
     data object Loading : AuthState
-    data class Authenticated(val user: UserEntity) : AuthState
+    data class Authenticated(val user: UserModel) : AuthState
     data class Error(val message: String) : AuthState
 }
 
-@Factory
+@KoinViewModel
 class AuthViewModel(
     private val repository: AuthRepository,
     private val sessionRepository: SessionRepository
@@ -85,7 +85,7 @@ class AuthViewModel(
 
     private fun submitLogin(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
-            _state.value = AuthState.Error("Поля не могут быть пустыми")
+            _state.value = AuthState.Error("Введите логин и пароль")
             return
         }
 
@@ -104,7 +104,7 @@ class AuthViewModel(
 
     private fun submitRegisterParent(email: String, password: String, firstName: String, lastName: String) {
         if (email.isBlank() || password.isBlank() || firstName.isBlank() || lastName.isBlank()) {
-            _state.value = AuthState.Error("Все обязательные поля должны быть заполнены")
+            _state.value = AuthState.Error("Заполните обязательные поля")
             return
         }
 

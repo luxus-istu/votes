@@ -1,29 +1,21 @@
 package ru.luxus.votes.features.games.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.CorrectGreen
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.luxus.votes.core.theme.LocalExtendedColors
 import ru.luxus.votes.core.widgets.QuizScaffold
 
 @Composable
@@ -32,7 +24,8 @@ fun SortingGamePage(
     onGameComplete: () -> Unit,
     onBack: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val extended = LocalExtendedColors.current
 
     when (val current = state) {
         is GamesState.SortingInProgress -> {
@@ -43,28 +36,44 @@ fun SortingGamePage(
                 onBack = onBack
             ) {
                 LinearProgressIndicator(
-                    progress = { (current.currentItemIndex + 1).toFloat() / current.total },
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                    color = UdmurtRed,
-                    trackColor = UdmurtRed.copy(alpha = 0.2f)
+                    progress = {
+                        (current.currentItemIndex + 1).toFloat() / current.total
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (current.lastFeedback != null) {
+                    val isCorrect = current.lastWasCorrect == true
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = MaterialTheme.shapes.small,
                         colors = CardDefaults.cardColors(
-                            containerColor = if (current.lastFeedback.startsWith("✓")) CorrectGreen.copy(alpha = 0.15f) else UdmurtRed.copy(alpha = 0.15f)
+                            containerColor = if (isCorrect) {
+                                extended.successContainer
+                            } else {
+                                MaterialTheme.colorScheme.errorContainer
+                            }
                         )
                     ) {
                         Text(
                             text = current.lastFeedback,
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Bold,
-                            color = if (current.lastFeedback.startsWith("✓")) CorrectGreen else UdmurtRed
+                            color = if (isCorrect) {
+                                extended.onSuccessContainer
+                            } else {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            }
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -73,19 +82,25 @@ fun SortingGamePage(
                 // Card to sort
                 if (currentItem != null) {
                     Card(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxSize().padding(24.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
                             Text(
                                 text = currentItem.udmurt,
-                                fontSize = 32.sp,
+                                style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = TextAlign.Center
@@ -93,14 +108,14 @@ fun SortingGamePage(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = currentItem.transcription,
-                                fontSize = 16.sp,
-                                color = UdmurtRed,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Medium
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            IconButton(
+                            FilledTonalIconButton(
                                 onClick = {
                                     viewModel.onEvent(
                                         GamesEvent.PlayAudio(
@@ -109,14 +124,16 @@ fun SortingGamePage(
                                         )
                                     )
                                 },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(UdmurtGold.copy(alpha = 0.25f), CircleShape)
+                                modifier = Modifier.size(52.dp),
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
                             ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.VolumeUp,
                                     contentDescription = "Прослушать",
-                                    tint = UdmurtRed
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
@@ -126,10 +143,21 @@ fun SortingGamePage(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "Отправь карточку в правильную корзину:",
-                    fontSize = 15.sp,
+                    text = "Выбери категорию",
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = currentItem?.udmurt ?: "",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -143,15 +171,23 @@ fun SortingGamePage(
                 ) {
                     CategoryBucketCard(
                         categoryName = current.categoryA,
-                        color = UdmurtRed,
-                        onClick = { viewModel.onEvent(GamesEvent.AnswerSorting(current.categoryA)) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        borderColor = MaterialTheme.colorScheme.primary,
+                        onClick = {
+                            viewModel.onEvent(GamesEvent.AnswerSorting(current.categoryA))
+                        },
                         modifier = Modifier.weight(1f)
                     )
 
                     CategoryBucketCard(
                         categoryName = current.categoryB,
-                        color = UdmurtGold,
-                        onClick = { viewModel.onEvent(GamesEvent.AnswerSorting(current.categoryB)) },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        borderColor = MaterialTheme.colorScheme.secondary,
+                        onClick = {
+                            viewModel.onEvent(GamesEvent.AnswerSorting(current.categoryB))
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -169,30 +205,32 @@ fun SortingGamePage(
 @Composable
 private fun CategoryBucketCard(
     categoryName: String,
-    color: Color,
+    containerColor: Color,
+    contentColor: Color,
+    borderColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .height(110.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
-            .border(2.dp, color, RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f))
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 116.dp),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = BorderStroke(2.dp, borderColor)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = categoryName.replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface
+                color = contentColor
             )
         }
     }

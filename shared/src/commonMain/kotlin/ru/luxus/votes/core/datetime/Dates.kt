@@ -1,4 +1,4 @@
-package ru.luxus.votes
+package ru.luxus.votes.core.datetime
 
 /**
  * Local date used for daily progress keys, formatted as `dd.MM.yyyy`.

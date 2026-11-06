@@ -1,28 +1,29 @@
-package ru.luxus.votes.features.settings.data
+package ru.luxus.votes.features.settings.data.repository
 
-import org.koin.core.annotation.Single
+import org.koin.core.annotation.Singleton
 import ru.luxus.votes.core.database.AppDatabase
-import ru.luxus.votes.features.settings.domain.SettingsEntity
-import ru.luxus.votes.core.database.entity.SettingsEntity as SettingsRow
+import ru.luxus.votes.core.database.entity.SettingsEntity
+import ru.luxus.votes.features.settings.domain.SettingsModel
+import ru.luxus.votes.features.settings.domain.repository.SettingsRepository
 
-@Single
-class SettingsRepository(private val db: AppDatabase) {
+@Singleton(binds = [SettingsRepository::class])
+class SettingsRepositoryImpl(private val db: AppDatabase) : SettingsRepository {
 
     private val settingsDao = db.settingsDao()
 
-    suspend fun getSettings(): SettingsEntity {
-        val row = settingsDao.get() ?: return SettingsEntity()
-        return SettingsEntity(
+    override suspend fun getSettings(): SettingsModel {
+        val row = settingsDao.get() ?: return SettingsModel()
+        return SettingsModel(
             soundEnabled = row.soundEnabled,
             notificationsEnabled = row.notificationsEnabled,
             geolocationEnabled = row.geolocationEnabled,
         )
     }
 
-    suspend fun updateSettings(settings: SettingsEntity) {
+    override suspend fun updateSettings(settings: SettingsModel) {
         val existing = settingsDao.get()
         settingsDao.upsert(
-            SettingsRow(
+            SettingsEntity(
                 soundEnabled = settings.soundEnabled,
                 notificationsEnabled = settings.notificationsEnabled,
                 geolocationEnabled = settings.geolocationEnabled,

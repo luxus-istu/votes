@@ -1,17 +1,15 @@
 package ru.luxus.votes.features.lessons.presentation
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,15 +17,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.abs
 import org.jetbrains.compose.resources.painterResource
-import ru.luxus.votes.core.theme.CorrectGreen
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
+import ru.luxus.votes.core.theme.LocalExtendedColors
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
 import ru.luxus.votes.features.games.domain.WordEntry
@@ -42,7 +42,8 @@ fun LessonCardsPage(
     onBack: () -> Unit,
     onPlayRandomGame: (String) -> Unit,
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val extended = LocalExtendedColors.current
 
     val loadedState = state as? LessonsState.Loaded
     val categoryWords = loadedState?.groupedWords?.get(topic) ?: emptyList()
@@ -83,12 +84,21 @@ fun LessonCardsPage(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (showVictory) "Все слова изучены!"
-                    else "Изучено $learnedCount из ${categoryWords.size}",
-                    fontSize = 14.sp,
+                    text = if (showVictory) {
+                        "Все слова изучены!"
+                    } else {
+                        "Изучено $learnedCount из ${categoryWords.size}"
+                    },
+                    modifier = Modifier.semantics {
+                        if (showVictory) heading()
+                    },
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = if (showVictory) FontWeight.Bold else FontWeight.Normal,
-                    color = if (showVictory) CorrectGreen
-                    else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    color = if (showVictory) {
+                        extended.success
+                    } else {
+                        MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    }
                 )
             }
 
@@ -96,9 +106,16 @@ fun LessonCardsPage(
 
             LinearProgressIndicator(
                 progress = { learnedCount.toFloat() / categoryWords.size },
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color = if (topicComplete) CorrectGreen else UdmurtRed,
-                trackColor = UdmurtRed.copy(alpha = 0.15f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(MaterialTheme.shapes.extraSmall),
+                color = if (topicComplete) {
+                    extended.success
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -126,9 +143,11 @@ fun LessonCardsPage(
                         .fillMaxWidth()
                         .weight(1f)
                 ) { page ->
-                    val wordIndex = ((page % categoryWords.size) + categoryWords.size) % categoryWords.size
+                    val wordIndex = ((page % categoryWords.size) + categoryWords.size) %
+                        categoryWords.size
                     val word = categoryWords[wordIndex]
-                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                    val pageOffset = (pagerState.currentPage - page) +
+                        pagerState.currentPageOffsetFraction
                     val distance = abs(pageOffset).coerceAtMost(2.5f)
 
                     WordCard(
@@ -168,11 +187,11 @@ fun LessonCardsPage(
 
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "👈 Листайте по кругу 👉",
+                    text = "Листай карточки",
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -190,28 +209,37 @@ private fun WordCard(
     onPlayAudio: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val extended = LocalExtendedColors.current
+
     Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(26.dp))
-            .clickable(onClick = onFlip),
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        onClick = onFlip,
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp).fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(word.emoji, fontSize = 72.sp)
+            Text(
+                text = word.emoji,
+                modifier = Modifier.clearAndSetSemantics { },
+                fontSize = 72.sp
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = word.udmurt,
-                fontSize = 32.sp,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = UdmurtRed,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
 
@@ -219,23 +247,24 @@ private fun WordCard(
 
             Text(
                 text = word.transcription,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            IconButton(
+            FilledTonalIconButton(
                 onClick = onPlayAudio,
-                modifier = Modifier
-                    .size(50.dp)
-                    .background(UdmurtGold.copy(alpha = 0.25f), CircleShape)
+                modifier = Modifier.size(52.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = "Прослушать произношение",
-                    tint = UdmurtRed,
                     modifier = Modifier.size(26.dp)
                 )
             }
@@ -244,50 +273,62 @@ private fun WordCard(
 
             if (isFlipped) {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = UdmurtRed.copy(alpha = 0.12f)
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Text(
                         text = "Перевод: ${word.russian}",
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                        fontSize = 20.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                         textAlign = TextAlign.Center
                     )
                 }
             } else {
                 Text(
-                    text = "👆 Нажмите на карточку, чтобы открыть перевод",
-                    fontSize = 13.sp,
+                    text = "Нажми на карточку, чтобы увидеть перевод",
+                    style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                 )
             }
 
             if (isViewed) {
                 Spacer(modifier = Modifier.height(14.dp))
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = CorrectGreen.copy(alpha = 0.15f)
+                    shape = MaterialTheme.shapes.small,
+                    color = extended.successContainer
                 ) {
-                    Text(
-                        text = "✓ Слово изучено",
+                    Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        color = CorrectGreen,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp
-                    )
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = extended.onSuccessContainer,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Слово изучено",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = extended.onSuccessContainer
+                        )
+                    }
                 }
             }
 
             if (showFinishButton) {
                 Spacer(modifier = Modifier.height(16.dp))
                 T2Button(
-                    text = "Я всё изучил(а)!",
+                    text = "Завершить тему",
                     onClick = onFinish,
                     modifier = Modifier.fillMaxWidth(),
-                    containerColor = CorrectGreen
+                    containerColor = extended.success,
+                    contentColor = extended.onSuccess
                 )
             }
         }
@@ -307,8 +348,6 @@ private fun TopicVictorySlide(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("🎉", fontSize = 44.sp)
-
         Image(
             painter = painterResource(Res.drawable.mascot_star),
             contentDescription = null,
@@ -319,19 +358,19 @@ private fun TopicVictorySlide(
         )
 
         Text(
-            text = "Тема пройдена!",
-            fontSize = 28.sp,
+            text = "Тема пройдена",
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = UdmurtRed,
+            color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Все $wordCount слов темы «${topic.replaceFirstChar { it.uppercase() }}» изучены. Проверим знания в игре?",
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
+            text = "Все $wordCount слов темы «${topic.replaceFirstChar { it.uppercase() }}» изучены. Проверь знания в игре.",
+            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             modifier = Modifier.padding(horizontal = 12.dp)
@@ -342,8 +381,7 @@ private fun TopicVictorySlide(
         T2Button(
             text = "Проверить знания",
             onClick = onTestKnowledge,
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = UdmurtRed
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -351,8 +389,8 @@ private fun TopicVictorySlide(
         TextButton(onClick = onBackToTopics) {
             Text(
                 text = "К темам",
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
         }
     }

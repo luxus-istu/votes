@@ -1,28 +1,24 @@
 package ru.luxus.votes.features.games.presentation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.CorrectGreen
-import ru.luxus.votes.core.theme.IncorrectRed
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.luxus.votes.core.theme.LocalExtendedColors
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
 
@@ -32,7 +28,8 @@ fun ChooseTranslationPage(
     onGameComplete: () -> Unit,
     onBack: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val extended = LocalExtendedColors.current
 
     when (val current = state) {
         is GamesState.QuizInProgress -> {
@@ -41,26 +38,35 @@ fun ChooseTranslationPage(
                 onBack = onBack
             ) {
                 LinearProgressIndicator(
-                    progress = { (current.currentIndex + 1).toFloat() / current.totalQuestions },
-                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                    color = UdmurtRed,
-                    trackColor = UdmurtRed.copy(alpha = 0.2f)
+                    progress = {
+                        (current.currentIndex + 1).toFloat() / current.totalQuestions
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Column(
-                        modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = current.question.udmurt,
-                            fontSize = 30.sp,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
@@ -68,14 +74,14 @@ fun ChooseTranslationPage(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = current.question.transcription,
-                            fontSize = 16.sp,
-                            color = UdmurtRed,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium
                         )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        IconButton(
+                        FilledTonalIconButton(
                             onClick = {
                                 viewModel.onEvent(
                                     GamesEvent.PlayAudio(
@@ -84,50 +90,50 @@ fun ChooseTranslationPage(
                                     )
                                 )
                             },
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(UdmurtGold.copy(alpha = 0.25f), CircleShape)
+                            modifier = Modifier.size(52.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.VolumeUp,
                                 contentDescription = "Прослушать",
-                                tint = UdmurtRed
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "Выберите верный перевод на русский язык:",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Column(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     current.options.forEach { option ->
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable { viewModel.onEvent(GamesEvent.AnswerTranslate(option)) },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            onClick = {
+                                viewModel.onEvent(GamesEvent.AnswerTranslate(option))
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Row(
-                                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = option,
-                                    fontSize = 17.sp,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -143,35 +149,52 @@ fun ChooseTranslationPage(
                 title = "Результат ответа",
                 onBack = onBack
             ) {
+                val container = if (current.isCorrect) {
+                    extended.successContainer
+                } else {
+                    MaterialTheme.colorScheme.errorContainer
+                }
+                val onContainer = if (current.isCorrect) {
+                    extended.onSuccessContainer
+                } else {
+                    MaterialTheme.colorScheme.onErrorContainer
+                }
+                val accent = if (current.isCorrect) {
+                    extended.success
+                } else {
+                    MaterialTheme.colorScheme.error
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .background(
-                            if (current.isCorrect) CorrectGreen.copy(alpha = 0.15f) else IncorrectRed.copy(alpha = 0.15f),
-                            RoundedCornerShape(24.dp)
-                        )
+                        .background(container, MaterialTheme.shapes.extraLarge)
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         // The picture is revealed only now, as a memory aid,
                         // never while the child is choosing the answer.
-                        Text(current.previous.question.emoji, fontSize = 48.sp)
+                        Text(
+                            text = current.previous.question.emoji,
+                            modifier = Modifier.clearAndSetSemantics { },
+                            fontSize = 48.sp
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = if (current.isCorrect) "🌟 Ӟеч! Правильно!" else "❌ Почти получилось!",
-                            fontSize = 24.sp,
+                            text = if (current.isCorrect) "Ӟеч! Верно." else "Неверно.",
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (current.isCorrect) CorrectGreen else IncorrectRed,
+                            color = accent,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = current.explanation,
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            color = onContainer.copy(alpha = 0.9f),
                             textAlign = TextAlign.Center
                         )
                     }
@@ -182,8 +205,7 @@ fun ChooseTranslationPage(
                 T2Button(
                     text = "Следующий вопрос",
                     onClick = { viewModel.onEvent(GamesEvent.NextQuestion) },
-                    modifier = Modifier.fillMaxWidth(),
-                    containerColor = UdmurtRed
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

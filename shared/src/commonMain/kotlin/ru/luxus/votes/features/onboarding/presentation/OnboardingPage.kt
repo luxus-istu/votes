@@ -10,7 +10,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,12 +19,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
 import ru.luxus.votes.core.widgets.T2Button
 import votes.shared.generated.resources.Res
 import votes.shared.generated.resources.mascot_book
@@ -41,7 +37,6 @@ import votes.shared.generated.resources.mascot_wave_closeup
 enum class OnboardingKind { APP, PARENT, CHILD }
 
 private data class OnboardingStep(
-    val emoji: String,
     val title: String,
     val description: String,
 )
@@ -49,55 +44,46 @@ private data class OnboardingStep(
 private fun stepsFor(kind: OnboardingKind): List<OnboardingStep> = when (kind) {
     OnboardingKind.APP -> listOf(
         OnboardingStep(
-            emoji = "🎉",
-            title = "Добро пожаловать!",
-            description = "«Ӟеч-а бур-а удмурт кыл?» помогает детям 5–10 лет учить удмуртский язык играя."
+            title = "Ӟечбуресь!",
+            description = "Это приложение для детей от 5 до 10 лет. Здесь можно учить удмуртские слова, слушать их и играть."
         ),
         OnboardingStep(
-            emoji = "📚",
-            title = "Слова и игры",
-            description = "Карточки слов по темам и шесть мини-игр: перевод, сортировка, memory, собери слово и другие."
+            title = "Слова и карточки",
+            description = "В словаре есть темы «Животные», «Еда», «Семья», «Цвета» и другие. На каждой карточке есть слово, перевод и звук."
         ),
         OnboardingStep(
-            emoji = "👨‍👩‍👧‍👦",
             title = "Родитель и ребёнок",
-            description = "Родитель создаёт профиль ребёнка и следит за успехами, а ребёнок занимается под своим логином."
+            description = "Родитель создаёт профиль ребёнка. Ребёнок входит со своим логином и учится отдельно."
         ),
     )
 
     OnboardingKind.PARENT -> listOf(
         OnboardingStep(
-            emoji = "🧭",
             title = "Кабинет родителя",
-            description = "Здесь собраны все ваши дети: профили, прогресс и статистика в одном месте."
+            description = "Здесь видны профили детей, их прогресс и результаты игр."
         ),
         OnboardingStep(
-            emoji = "➕",
             title = "Профили детей",
-            description = "Добавьте ребёнка, укажите дату рождения и придумайте логин и пароль для его входа."
+            description = "Добавьте ребёнка, укажите дату рождения и задайте логин и пароль для входа."
         ),
         OnboardingStep(
-            emoji = "📈",
-            title = "Успехи и отчёты",
-            description = "Смотрите освоение тем, ошибки и успеваемость по играм — и копируйте отчёт для учителя."
+            title = "Отчёты",
+            description = "В карточке ребёнка видно, сколько слов он выучил и какие слова вызывают ошибки. Отчёт можно скопировать для учителя."
         ),
     )
 
     OnboardingKind.CHILD -> listOf(
         OnboardingStep(
-            emoji = "🚀",
-            title = "Привет! Начнём?",
-            description = "Учи удмуртские слова с яркими карточками — словарь разбит на интересные темы."
+            title = "Привет!",
+            description = "В словаре есть карточки со словами. Открой карточку, чтобы увидеть перевод и услышать слово."
         ),
         OnboardingStep(
-            emoji = "🎮",
-            title = "Играй и запоминай",
-            description = "Шесть мини-игр помогут закрепить слова: выбирай перевод, собирай слово, находи пару."
+            title = "Игры",
+            description = "Шесть игр помогают запомнить слова. Выбирай перевод, собирай слова и ищи пары."
         ),
         OnboardingStep(
-            emoji = "🌟",
-            title = "Твой профиль",
-            description = "Выбери аватар и имя, следи за своими успехами и ставь новые рекорды."
+            title = "Профиль",
+            description = "Выбери аватар. В профиле видно, сколько слов ты выучил и как играешь."
         ),
     )
 }
@@ -142,7 +128,6 @@ fun OnboardingPage(
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
-        // Header (fixed above the pager)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -150,24 +135,21 @@ fun OnboardingPage(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Ӟеч-а бур-а удмурт кыл?",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = UdmurtRed
-                )
-            }
+            Text(
+                text = "Ӟеч-а бур-а удмурт кыл?",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
             TextButton(onClick = onFinished) {
                 Text(
                     text = "Пропустить",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f),
-                    fontSize = 13.sp
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Swipeable pages
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
@@ -183,11 +165,13 @@ fun OnboardingPage(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Mascot illustration
                 Box(
                     modifier = Modifier
                         .size(190.dp)
-                        .background(UdmurtGold.copy(alpha = 0.18f), CircleShape),
+                        .background(
+                            MaterialTheme.colorScheme.secondaryContainer,
+                            CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -204,7 +188,7 @@ fun OnboardingPage(
 
                 Text(
                     text = step.title,
-                    fontSize = 24.sp,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
@@ -214,23 +198,20 @@ fun OnboardingPage(
 
                 Text(
                     text = step.description,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
         }
 
-        // Bottom controls (fixed)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(top = 8.dp, bottom = 16.dp)
         ) {
-            // Dots
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
@@ -241,8 +222,11 @@ fun OnboardingPage(
                             .padding(horizontal = 4.dp)
                             .size(if (index == currentPage) 10.dp else 8.dp)
                             .background(
-                                color = if (index == currentPage) UdmurtRed
-                                else UdmurtRed.copy(alpha = 0.2f),
+                                color = if (index == currentPage) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                },
                                 shape = CircleShape
                             )
                     )
@@ -262,10 +246,10 @@ fun OnboardingPage(
                                 pagerState.animateScrollToPage(currentPage - 1)
                             }
                         },
-                        shape = RoundedCornerShape(50),
+                        shape = CircleShape,
                         modifier = Modifier.height(52.dp)
                     ) {
-                        Text("Назад", fontWeight = FontWeight.Bold)
+                        Text("Назад", style = MaterialTheme.typography.labelLarge)
                     }
                 }
                 T2Button(
@@ -279,8 +263,7 @@ fun OnboardingPage(
                             }
                         }
                     },
-                    modifier = Modifier.weight(1f),
-                    containerColor = UdmurtRed
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

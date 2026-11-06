@@ -9,23 +9,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.CorrectGreen
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.luxus.votes.core.theme.LocalExtendedColors
 import ru.luxus.votes.core.widgets.QuizScaffold
 
 @Composable
@@ -34,48 +34,53 @@ fun MemoryGamePage(
     onGameComplete: () -> Unit,
     onBack: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val extended = LocalExtendedColors.current
 
     when (val current = state) {
         is GamesState.MemoryInProgress -> {
             QuizScaffold(
-                title = "Найди пару (Memory)",
+                title = "Найди пару",
                 onBack = onBack
             ) {
                 // Header with stats
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Row(
-                        modifier = Modifier.padding(14.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
                             Text(
                                 text = "Найдено пар",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "${current.matchesFound} из ${current.totalPairs}",
-                                fontSize = 18.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = UdmurtRed
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "Сделано ходов",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                text = "Ходы",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "${current.moves}",
-                                fontSize = 18.sp,
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -85,12 +90,17 @@ fun MemoryGamePage(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Cards grid
+                // Cards grid. The column count adapts to the available width:
+                // small phones get 2–3 columns of comfortable cards, large
+                // tablets fit more columns instead of stretching the cards.
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Adaptive(minSize = 100.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth().weight(1f)
+                    contentPadding = PaddingValues(bottom = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
                 ) {
                     itemsIndexed(current.cards) { index, card ->
                         val isRevealed = card.isFlipped || card.isMatched
@@ -103,14 +113,28 @@ fun MemoryGamePage(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(110.dp)
+                                // Height scales with the card width on every
+                                // screen size, so the board keeps fitting on
+                                // small phones and avoids huge blank cards on
+                                // tablets.
+                                .aspectRatio(0.78f)
                                 .graphicsLayer {
                                     rotationY = rotation
                                     cameraDistance = 12f * density
                                 }
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable(enabled = !isRevealed && !current.isLocked) {
+                                .clip(MaterialTheme.shapes.medium)
+                                .clickable(
+                                    enabled = !isRevealed && !current.isLocked
+                                ) {
                                     viewModel.onEvent(GamesEvent.FlipMemoryCard(index))
+                                }
+                                .semantics(mergeDescendants = true) {
+                                    role = Role.Button
+                                    contentDescription = when {
+                                        card.isMatched -> "Пара найдена: ${card.text}"
+                                        card.isFlipped -> "Открыта карточка: ${card.text}"
+                                        else -> "Закрытая карточка"
+                                    }
                                 }
                         ) {
                             if (rotation > 90f) {
@@ -119,15 +143,24 @@ fun MemoryGamePage(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .graphicsLayer { rotationY = 180f }
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .clip(MaterialTheme.shapes.medium)
                                         .background(
-                                            if (card.isMatched) CorrectGreen.copy(alpha = 0.15f)
-                                            else MaterialTheme.colorScheme.surfaceVariant
+                                            if (card.isMatched) {
+                                                extended.successContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceVariant
+                                            }
                                         )
                                         .then(
                                             if (card.isMatched) {
-                                                Modifier.border(2.dp, CorrectGreen, RoundedCornerShape(16.dp))
-                                            } else Modifier
+                                                Modifier.border(
+                                                    2.dp,
+                                                    extended.success,
+                                                    MaterialTheme.shapes.medium
+                                                )
+                                            } else {
+                                                Modifier
+                                            }
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -137,21 +170,28 @@ fun MemoryGamePage(
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         if (card.emoji.isNotBlank()) {
-                                            Text(text = card.emoji, fontSize = 28.sp)
+                                            Text(
+                                                text = card.emoji,
+                                                fontSize = 28.sp
+                                            )
                                             Spacer(modifier = Modifier.height(4.dp))
                                         }
                                         Text(
                                             text = card.text,
-                                            fontSize = 14.sp,
+                                            style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Bold,
                                             textAlign = TextAlign.Center,
-                                            color = if (card.isMatched) CorrectGreen else MaterialTheme.colorScheme.onSurface
+                                            color = if (card.isMatched) {
+                                                extended.onSuccessContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
                                         )
                                         if (card.subtext.isNotBlank()) {
                                             Text(
                                                 text = card.subtext,
-                                                fontSize = 11.sp,
-                                                color = UdmurtRed,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
                                                 textAlign = TextAlign.Center
                                             )
                                         }
@@ -162,8 +202,8 @@ fun MemoryGamePage(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(UdmurtRed),
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .background(MaterialTheme.colorScheme.primary),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text("🦊", fontSize = 30.sp)

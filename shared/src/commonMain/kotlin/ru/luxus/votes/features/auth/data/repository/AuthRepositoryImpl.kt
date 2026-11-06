@@ -1,24 +1,25 @@
-package ru.luxus.votes.features.auth.data
+package ru.luxus.votes.features.auth.data.repository
 
-import org.koin.core.annotation.Single
+import org.koin.core.annotation.Singleton
 import ru.luxus.votes.core.database.AppDatabase
 import ru.luxus.votes.core.database.entity.ChildProfileEntity
-import ru.luxus.votes.core.database.entity.SettingsEntity as SettingsRow
-import ru.luxus.votes.core.database.entity.UserEntity as UserRow
-import ru.luxus.votes.features.auth.domain.UserEntity
-import ru.luxus.votes.features.parent.data.ParentRepository
+import ru.luxus.votes.core.database.entity.SettingsEntity
+import ru.luxus.votes.core.database.entity.UserEntity
+import ru.luxus.votes.features.auth.domain.UserModel
+import ru.luxus.votes.features.auth.domain.repository.AuthRepository
+import ru.luxus.votes.features.parent.domain.repository.ParentRepository
 
-@Single
-class AuthRepository(
+@Singleton(binds = [AuthRepository::class])
+class AuthRepositoryImpl(
     private val db: AppDatabase,
     private val parentRepository: ParentRepository,
-) {
+) : AuthRepository {
 
     private val userDao = db.userDao()
     private val childDao = db.childDao()
     private val settingsDao = db.settingsDao()
 
-    suspend fun checkSession(): UserEntity? {
+    override suspend fun checkSession(): UserModel? {
         // Restore a saved child session first; parent sessions live in UserTable
         val childId = settingsDao.get()?.currentChildId.orEmpty()
         if (childId.isNotBlank()) {
@@ -34,7 +35,7 @@ class AuthRepository(
     }
 
     private suspend fun storeChildSession(childId: String?) {
-        val current = settingsDao.get() ?: SettingsRow()
+        val current = settingsDao.get() ?: SettingsEntity()
         settingsDao.upsert(current.copy(currentChildId = childId.orEmpty()))
     }
 
@@ -43,7 +44,7 @@ class AuthRepository(
      * 1. parent account (users table) – email + password
      * 2. child profile (created by a parent on the dashboard) – email + password
      */
-    suspend fun login(email: String, password: String): Result<UserEntity> {
+    override suspend fun login(email: String, password: String): Result<UserModel> {
         val normalizedEmail = email.trim().lowercase()
 
         val parent = userDao.getByEmail(normalizedEmail)
@@ -57,7 +58,7 @@ class AuthRepository(
         }
 
         val child = childDao.getChildByEmail(normalizedEmail)
-            ?: return Result.failure(Exception("Пользователь с таким email не найден"))
+            ?: return Result.failure(Exception("Аккаунт с таким email не найден"))
 
         if (child.childPassword.isEmpty() || child.childPassword != password) {
             return Result.failure(Exception("Неверный пароль"))
@@ -71,30 +72,30 @@ class AuthRepository(
     }
 
     /** Parent registration: email + password */
-    suspend fun registerParent(
+    override suspend fun registerParent(
         email: String,
         password: String,
         firstName: String,
         lastName: String,
-    ): Result<UserEntity> {
+    ): Result<UserModel> {
         val normalizedEmail = email.trim().lowercase()
         if (userDao.getByEmail(normalizedEmail) != null) {
-            return Result.failure(Exception("Пользователь с таким email уже зарегистрирован"))
+            return Result.failure(Exception("Аккаунт с таким email уже зарегистрирован"))
         }
         if (childDao.getChildByEmail(normalizedEmail) != null) {
-            return Result.failure(Exception("Этот email уже используется профилем ребёнка"))
+            return Result.failure(Exception("Этот email уже занят профилем ребёнка"))
         }
         if (password.length < 4) {
-            return Result.failure(Exception("Пароль должен содержать минимум 4 символа"))
+            return Result.failure(Exception("Пароль должен быть не короче 4 символов"))
         }
 
-        val newUser = UserEntity(
+        val newUser = UserModel(
             email = normalizedEmail,
             firstName = firstName.trim(),
             lastName = lastName.trim(),
             gender = "Не указан",
             age = 30,
-            role = ROLE_PARENT,
+            role = AuthRepository.ROLE_PARENT,
             avatar = "👩",
         )
         userDao.upsert(newUser.toRow(password = password, isCurrent = true))
@@ -103,18 +104,18 @@ class AuthRepository(
         return Result.success(newUser)
     }
 
-    suspend fun updateProfile(
+    override suspend fun updateProfile(
         email: String,
         firstName: String,
         lastName: String,
         age: Int,
         role: String,
         avatar: String,
-    ): Result<UserEntity> {
-        if (role == ROLE_CHILD) {
+    ): Result<UserModel> {
+        if (role == AuthRepository.ROLE_CHILD) {
             // Child session: update the child profile instead of a user row
             val child = childDao.getActiveChild()
-                ?: return Result.failure(Exception("Активный профиль ребёнка не найден"))
+                ?: return Result.failure(Exception("Профиль ребёнка не выбран"))
             val current = childDao.getChildById(child.id)
 
             parentRepository.updateChild(
@@ -127,20 +128,20 @@ class AuthRepository(
                 fallbackAge = age,
             )
             return Result.success(
-                UserEntity(
+                UserModel(
                     email = email,
                     firstName = firstName.trim(),
                     lastName = lastName.trim(),
                     gender = "Не указан",
                     age = age,
-                    role = ROLE_CHILD,
+                    role = AuthRepository.ROLE_CHILD,
                     avatar = avatar,
                 )
             )
         }
 
         val existing = userDao.getByEmail(email)
-            ?: return Result.failure(Exception("Пользователь не найден"))
+            ?: return Result.failure(Exception("Аккаунт не найден"))
 
         userDao.updateProfile(
             email = email,
@@ -162,23 +163,23 @@ class AuthRepository(
         )
     }
 
-    suspend fun logout() {
+    override suspend fun logout() {
         userDao.clearCurrentUser()
         storeChildSession(null)
     }
 
     /** A session user built from a child profile (children have no user table row) */
-    private fun ChildProfileEntity.toSessionUser() = UserEntity(
+    private fun ChildProfileEntity.toSessionUser() = UserModel(
         email = parentEmail,
         firstName = name,
         lastName = lastName,
         gender = "Не указан",
         age = age,
-        role = ROLE_CHILD,
+        role = AuthRepository.ROLE_CHILD,
         avatar = avatar,
     )
 
-    private fun UserRow.toDomain() = UserEntity(
+    private fun UserEntity.toDomain() = UserModel(
         email = email,
         firstName = firstName,
         lastName = lastName,
@@ -188,7 +189,7 @@ class AuthRepository(
         avatar = avatar,
     )
 
-    private fun UserEntity.toRow(password: String, isCurrent: Boolean) = UserRow(
+    private fun UserModel.toRow(password: String, isCurrent: Boolean) = UserEntity(
         email = email,
         password = password,
         firstName = firstName,
@@ -199,9 +200,4 @@ class AuthRepository(
         avatar = avatar,
         isCurrent = isCurrent,
     )
-
-    companion object {
-        const val ROLE_PARENT = "Родитель"
-        const val ROLE_CHILD = "Ученик"
-    }
 }

@@ -87,9 +87,14 @@ fun UdmurtTheme(
         fontScale = (systemDensity.fontScale * 1.2f).coerceIn(1.2f, 1.8f)
     )
 
-    CompositionLocalProvider(LocalDensity provides kidFriendlyDensity) {
+    CompositionLocalProvider(
+        LocalDensity provides kidFriendlyDensity,
+        LocalExtendedColors provides if (darkTheme) ExtendedColors.Dark else ExtendedColors.Light
+    ) {
         MaterialTheme(
             colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+            typography = UdmurtTypography,
+            shapes = UdmurtShapes,
             content = content
         )
     }

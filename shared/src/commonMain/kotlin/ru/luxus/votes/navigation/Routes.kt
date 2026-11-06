@@ -62,6 +62,10 @@ data object ParentReportRoute
 @Serializable
 data object ParentDashboardRoute
 
+// All study topics of the selected child (opened from the parent dashboard)
+@Serializable
+data object ParentTopicsRoute
+
 @Serializable
 data class ChildFormRoute(val childId: String? = null)
 

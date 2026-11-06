@@ -1,9 +1,9 @@
-package ru.luxus.votes.features.games.data
+package ru.luxus.votes.features.games.data.repository
 
 import androidx.room3.withWriteTransaction
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.koin.core.annotation.Single
+import org.koin.core.annotation.Singleton
 import ru.luxus.votes.core.database.AppDatabase
 import ru.luxus.votes.core.database.entity.ChildDailyProgressEntity
 import ru.luxus.votes.core.database.entity.ChildLessonProgressEntity
@@ -18,11 +18,12 @@ import ru.luxus.votes.features.games.domain.DailyProgressEntry
 import ru.luxus.votes.features.games.domain.GameStats
 import ru.luxus.votes.features.games.domain.WordEntry
 import ru.luxus.votes.features.games.domain.WordErrorEntry
-import ru.luxus.votes.getDayOfYear
-import ru.luxus.votes.getTodayDateString
+import ru.luxus.votes.features.games.domain.repository.GamesRepository
+import ru.luxus.votes.core.datetime.getDayOfYear
+import ru.luxus.votes.core.datetime.getTodayDateString
 
-@Single
-class GamesRepository(private val db: AppDatabase) {
+@Singleton(binds = [GamesRepository::class])
+class GamesRepositoryImpl(private val db: AppDatabase) : GamesRepository {
 
     private val wordDao = db.wordDao()
     private val gameStatsDao = db.gameStatsDao()
@@ -36,7 +37,7 @@ class GamesRepository(private val db: AppDatabase) {
 
     // Complete curriculum materials provided by the case study:
     // "Зеч-а бур-а удмурт кыл?" (Материалы к кейсу.docx)
-    val defaultWords = listOf(
+    override val defaultWords = listOf(
         // 1. Приветствие (Greetings)
         WordEntry("g1", "ӟечбуресь", "[дзечбурэ́сь]", "здравствуйте", "приветствие", "👋"),
         WordEntry("g2", "умоесь", "[умо́есь]", "здравствуйте", "приветствие", "🤝"),
@@ -47,16 +48,16 @@ class GamesRepository(private val db: AppDatabase) {
         WordEntry("g7", "ӟеч лу", "[дзеч лу]", "до свидания", "приветствие", "👋"),
 
         // 2. Числа 1-10 (Numbers 1-10)
-        WordEntry("n1", "одӥг", "[оды́г]", "один (1)", "числа 1-10", "1️⃣"),
-        WordEntry("n2", "кык", "[кык]", "два (2)", "числа 1-10", "2️⃣"),
-        WordEntry("n3", "куинь", "[куинь]", "три (3)", "числа 1-10", "3️⃣"),
-        WordEntry("n4", "ньыль", "[ньыль]", "четыре (4)", "числа 1-10", "4️⃣"),
-        WordEntry("n5", "вить", "[вить]", "пять (5)", "числа 1-10", "5️⃣"),
-        WordEntry("n6", "куать", "[куать]", "шесть (6)", "числа 1-10", "6️⃣"),
-        WordEntry("n7", "сизьым", "[си́зьым]", "семь (7)", "числа 1-10", "7️⃣"),
-        WordEntry("n8", "тямыс", "[тя́мыс]", "восемь (8)", "числа 1-10", "8️⃣"),
-        WordEntry("n9", "укмыс", "[у́кмыс]", "девять (9)", "числа 1-10", "9️⃣"),
-        WordEntry("n10", "дас", "[дас]", "десять (10)", "числа 1-10", "🔟"),
+        WordEntry("n1", "одӥг", "[оды́г]", "один (1)", "числа от 1 до 10", "1️⃣"),
+        WordEntry("n2", "кык", "[кык]", "два (2)", "числа от 1 до 10", "2️⃣"),
+        WordEntry("n3", "куинь", "[куинь]", "три (3)", "числа от 1 до 10", "3️⃣"),
+        WordEntry("n4", "ньыль", "[ньыль]", "четыре (4)", "числа от 1 до 10", "4️⃣"),
+        WordEntry("n5", "вить", "[вить]", "пять (5)", "числа от 1 до 10", "5️⃣"),
+        WordEntry("n6", "куать", "[куать]", "шесть (6)", "числа от 1 до 10", "6️⃣"),
+        WordEntry("n7", "сизьым", "[си́зьым]", "семь (7)", "числа от 1 до 10", "7️⃣"),
+        WordEntry("n8", "тямыс", "[тя́мыс]", "восемь (8)", "числа от 1 до 10", "8️⃣"),
+        WordEntry("n9", "укмыс", "[у́кмыс]", "девять (9)", "числа от 1 до 10", "9️⃣"),
+        WordEntry("n10", "дас", "[дас]", "десять (10)", "числа от 1 до 10", "🔟"),
 
         // 3. Дикие животные (Wild Animals)
         WordEntry("wld1", "гондыр", "[гонды́р]", "медведь", "дикие животные", "🐻"),
@@ -157,27 +158,27 @@ class GamesRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun getWords(): List<WordEntry> {
+    override suspend fun getWords(): List<WordEntry> {
         ensureSeeded()
         val rows = wordDao.getAll()
         return if (rows.isEmpty()) defaultWords else rows.map { it.toDomain() }
     }
 
-    suspend fun getWordsByCategory(category: String): List<WordEntry> {
+    override suspend fun getWordsByCategory(category: String): List<WordEntry> {
         ensureSeeded()
         val rows = wordDao.getByCategory(category)
         return if (rows.isEmpty()) defaultWords.filter { it.category == category } else rows.map { it.toDomain() }
     }
 
-    suspend fun getCategories(): List<String> = getWords().map { it.category }.distinct()
+    override suspend fun getCategories(): List<String> = getWords().map { it.category }.distinct()
 
-    suspend fun getWordOfTheDay(): WordEntry {
+    override suspend fun getWordOfTheDay(): WordEntry {
         val words = getWords()
         if (words.isEmpty()) return defaultWords.first()
         return words[getDayOfYear() % words.size]
     }
 
-    suspend fun getStats(): GameStats {
+    override suspend fun getStats(): GameStats {
         val rows = gameStatsDao.getAll()
         var totalAnswered = 0
         var totalCorrect = 0
@@ -200,7 +201,7 @@ class GamesRepository(private val db: AppDatabase) {
     }
 
     /** Game statistics of the signed-in child (falls back to device-wide stats). */
-    suspend fun getStatsForActiveChild(): GameStats {
+    override suspend fun getStatsForActiveChild(): GameStats {
         val activeChild = childDao.getActiveChild() ?: return getStats()
         val rows = childDao.getChildStats(activeChild.id)
         var totalAnswered = 0
@@ -224,12 +225,14 @@ class GamesRepository(private val db: AppDatabase) {
     }
 
     /** Most frequent mistakes of the signed-in child. */
-    suspend fun getTopErrorWordsForActiveChild(): List<WordErrorEntry> {
+    override suspend fun getTopErrorWordsForActiveChild(): List<WordErrorEntry> {
         val activeChild = childDao.getActiveChild() ?: return getTopErrorWords()
+        val transcriptions = transcriptionsById()
         return childDao.getChildWordErrors(activeChild.id).map {
             WordErrorEntry(
                 wordId = it.wordId,
                 udmurt = it.udmurt,
+                transcription = transcriptions[it.wordId].orEmpty(),
                 russian = it.russian,
                 errorCount = it.errorCount,
                 successCount = it.successCount,
@@ -237,7 +240,7 @@ class GamesRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun saveResult(gameKey: String, isCorrect: Boolean, word: WordEntry? = null) =
+    override suspend fun saveResult(gameKey: String, isCorrect: Boolean, word: WordEntry?) =
         db.withWriteTransaction {
             val existing = gameStatsDao.getForGame(gameKey)
             gameStatsDao.upsert(
@@ -313,7 +316,7 @@ class GamesRepository(private val db: AppDatabase) {
             }
         }
 
-    suspend fun getViewedWordIds(): Set<String> {
+    override suspend fun getViewedWordIds(): Set<String> {
         ensureSeeded()
         return lessonProgressDao.getViewedWordIds().toSet()
     }
@@ -322,14 +325,14 @@ class GamesRepository(private val db: AppDatabase) {
      * Lesson progress of the child who is currently signed in. Falls back to the
      * device-wide progress only when there is no active child profile.
      */
-    suspend fun getViewedWordIdsForActiveChild(): Set<String> {
+    override suspend fun getViewedWordIdsForActiveChild(): Set<String> {
         ensureSeeded()
         val activeChild = childDao.getActiveChild()
             ?: return lessonProgressDao.getViewedWordIds().toSet()
         return childDao.getChildLessonProgress(activeChild.id).toSet()
     }
 
-    suspend fun markWordViewed(wordId: String) = db.withWriteTransaction {
+    override suspend fun markWordViewed(wordId: String) = db.withWriteTransaction {
         val today = getTodayDateString()
         val activeChild = childDao.getActiveChild()
 
@@ -370,12 +373,14 @@ class GamesRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun getTopErrorWords(): List<WordErrorEntry> {
+    override suspend fun getTopErrorWords(): List<WordErrorEntry> {
         ensureSeeded()
+        val transcriptions = transcriptionsById()
         return wordErrorDao.getTopErrors().map {
             WordErrorEntry(
                 wordId = it.wordId,
                 udmurt = it.udmurt,
+                transcription = transcriptions[it.wordId].orEmpty(),
                 russian = it.russian,
                 errorCount = it.errorCount,
                 successCount = it.successCount,
@@ -383,7 +388,7 @@ class GamesRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun getDailyProgress(): List<DailyProgressEntry> {
+    override suspend fun getDailyProgress(): List<DailyProgressEntry> {
         ensureSeeded()
         // One day can never contain more new words than the child has learned
         // in total; this also repairs inflated counters from older builds.
@@ -398,7 +403,7 @@ class GamesRepository(private val db: AppDatabase) {
     }
 
     /** Daily progress of the signed-in child (falls back to device-wide data). */
-    suspend fun getDailyProgressForActiveChild(): List<DailyProgressEntry> {
+    override suspend fun getDailyProgressForActiveChild(): List<DailyProgressEntry> {
         ensureSeeded()
         val activeChild = childDao.getActiveChild() ?: return getDailyProgress()
         val learnedTotal = childDao.getChildLessonProgress(activeChild.id).size
@@ -411,12 +416,16 @@ class GamesRepository(private val db: AppDatabase) {
         }
     }
 
-    suspend fun resetAllProgress() = db.withWriteTransaction {
+    override suspend fun resetAllProgress() = db.withWriteTransaction {
         gameStatsDao.deleteAll()
         lessonProgressDao.deleteAll()
         wordErrorDao.deleteAll()
         dailyProgressDao.deleteAll()
     }
+
+    /** wordId -> stored transcription, so error lists keep the spoken form of every word. */
+    private suspend fun transcriptionsById(): Map<String, String> =
+        getWords().associate { it.id to it.transcription }
 
     private fun WordEntry.toEntity() = WordEntity(
         id = id,

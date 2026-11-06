@@ -1,25 +1,26 @@
 package ru.luxus.votes.features.profile.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.CorrectGreen
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
+import ru.luxus.votes.core.clipboard.copyText
+import ru.luxus.votes.core.theme.LocalExtendedColors
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.core.widgets.T2Button
-import ru.luxus.votes.features.auth.domain.UserEntity
+import ru.luxus.votes.features.auth.domain.UserModel
 import ru.luxus.votes.features.auth.presentation.AuthState
 import ru.luxus.votes.features.auth.presentation.AuthViewModel
 import ru.luxus.votes.features.games.presentation.GamesState
@@ -34,11 +35,12 @@ fun ParentReportPage(
     lessonsViewModel: LessonsViewModel,
     onBack: () -> Unit
 ) {
-    val authState by authViewModel.state.collectAsState()
-    val gamesState by gamesViewModel.state.collectAsState()
-    val lessonsState by lessonsViewModel.state.collectAsState()
+    val authState by authViewModel.state.collectAsStateWithLifecycle()
+    val gamesState by gamesViewModel.state.collectAsStateWithLifecycle()
+    val lessonsState by lessonsViewModel.state.collectAsStateWithLifecycle()
+    val extended = LocalExtendedColors.current
 
-    val user = (authState as? AuthState.Authenticated)?.user ?: UserEntity(
+    val user = (authState as? AuthState.Authenticated)?.user ?: UserModel(
         email = "student@udmurt.ru",
         firstName = "Ученик",
         lastName = "",
@@ -55,9 +57,15 @@ fun ParentReportPage(
     val loadedLessons = lessonsState as? LessonsState.Loaded
     val totalWords = loadedLessons?.groupedWords?.values?.flatten()?.size ?: 75
     val viewedCount = loadedLessons?.progress?.viewedWordIds?.size ?: 0
-    val progressPercent = if (totalWords > 0) ((viewedCount.toFloat() / totalWords) * 100).toInt() else 0
+    val progressPercent = if (totalWords > 0) {
+        ((viewedCount.toFloat() / totalWords) * 100).toInt()
+    } else {
+        0
+    }
 
     var copiedSnackbar by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     QuizScaffold(
         title = "Отчёт для родителей и учителей",
@@ -68,156 +76,151 @@ fun ParentReportPage(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = UdmurtRed)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(
-                                text = "Сводка успеваемости",
-                                color = White,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Приложение «Ӟеч-а бур-а удмурт кыл?»",
-                                color = White.copy(alpha = 0.85f),
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Отчёт об обучении",
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Text(
+                        text = "Приложение «Ӟеч-а бур-а удмурт кыл?»",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column {
-                            Text("Ученик", color = White.copy(alpha = 0.75f), fontSize = 11.sp)
-                            Text("${user.firstName} ${user.lastName}".trim().ifEmpty { "Ученик" }, color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Column {
-                            Text("Возраст", color = White.copy(alpha = 0.75f), fontSize = 11.sp)
-                            Text("${user.age} лет", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Column {
-                            Text("Статус", color = White.copy(alpha = 0.75f), fontSize = 11.sp)
-                            Text(user.role, color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
+                        ReportStat(
+                            label = "Ученик",
+                            value = "${user.firstName} ${user.lastName}".trim()
+                                .ifEmpty { "Ученик" },
+                            onPrimary = true,
+                            modifier = Modifier.weight(1.4f)
+                        )
+                        ReportStat(
+                            label = "Возраст",
+                            value = "${user.age} лет",
+                            onPrimary = true,
+                            modifier = Modifier.weight(0.8f)
+                        )
+                        ReportStat(
+                            label = "Статус",
+                            value = user.role,
+                            onPrimary = true,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Curriculum Mastery
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
+            ReportCard(title = "Слова") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Освоение учебной программы",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
+                        text = "Выучено $viewedCount из $totalWords слов",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Изучено слов: $viewedCount из $totalWords", fontSize = 14.sp)
-                        Text("$progressPercent%", fontWeight = FontWeight.Bold, color = UdmurtRed, fontSize = 14.sp)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { if (totalWords > 0) viewedCount.toFloat() / totalWords else 0f },
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
-                        color = UdmurtRed,
-                        trackColor = UdmurtRed.copy(alpha = 0.2f)
+                    Text(
+                        text = "$progressPercent%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = {
+                        if (totalWords > 0) viewedCount.toFloat() / totalWords else 0f
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ReportCard(title = "Игры") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ReportStat(
+                        label = "Ответов",
+                        value = "${stats?.totalAnswered ?: 0}",
+                        valueColor = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ReportStat(
+                        label = "Верно",
+                        value = "${stats?.totalCorrect ?: 0}",
+                        valueColor = extended.success,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ReportStat(
+                        label = "Точность",
+                        value = "${((stats?.accuracy ?: 0.0) * 100).toInt()}%",
+                        valueColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Game Accuracy
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Text(
-                        text = "Результаты в мини-играх",
+                        text = "Что повторить",
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Всего попыток", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                            Text("${stats?.totalAnswered ?: 0}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Column {
-                            Text("Успешных ответов", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                            Text("${stats?.totalCorrect ?: 0}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CorrectGreen)
-                        }
-                        Column {
-                            Text("Общая точность", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                            Text("${((stats?.accuracy ?: 0.0) * 100).toInt()}%", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = UdmurtRed)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Pedagogical Recommendation
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = UdmurtGold.copy(alpha = 0.15f))
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("💡", fontSize = 22.sp)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Методические рекомендации:",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     val recommendation = if (errorWords.isNotEmpty()) {
-                        "Рекомендуется уделить внимание словам: ${errorWords.take(3).joinToString(", ") { "«${it.udmurt}» (${it.russian})" }}. Лучше всего повторить их в играх «Выбери перевод» и «Собери слово»."
+                        "Повторите с ребёнком слова " +
+                            errorWords.take(3).joinToString(", ") {
+                                "«${it.udmurt}» (${it.russian})"
+                            } +
+                            ". Закрепите их в играх «Выбери перевод» и «Собери слово»."
                     } else if (viewedCount < 15) {
-                        "Ученик успешно начал обучение! Рекомендуется ежедневно проходить по 1 теме из словаря и закреплять материал в мини-играх."
+                        "Ребёнок только начал. Пусть проходит по одной теме в день и закрепляет слова в играх."
                     } else {
-                        "Превосходный прогресс! Ребёнок уверенно усваивает базовую лексику удмуртского языка. Рекомендуется переходить к изучению фраз и диалогов."
+                        "Ребёнок выучил базовые слова. Переходите к теме «Фразы» и коротким диалогам."
                     }
                     Text(
                         text = recommendation,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        lineHeight = 18.sp
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
                     )
                 }
             }
@@ -225,15 +228,90 @@ fun ParentReportPage(
             Spacer(modifier = Modifier.height(24.dp))
 
             T2Button(
-                text = if (copiedSnackbar) "✓ Сводка скопирована!" else "Поделиться отчётом",
+                text = if (copiedSnackbar) "Отчёт скопирован" else "Скопировать отчёт",
                 onClick = {
-                    copiedSnackbar = true
+                    val report = buildString {
+                        appendLine("Отчёт об обучении")
+                        appendLine("Ученик: ${user.firstName} ${user.lastName}".trim())
+                        appendLine("Возраст: ${user.age}")
+                        appendLine("Выучено слов: $viewedCount из $totalWords ($progressPercent%)")
+                        appendLine("Ответов: ${stats?.totalAnswered ?: 0}")
+                        appendLine("Верных: ${stats?.totalCorrect ?: 0}")
+                        appendLine("Точность: ${((stats?.accuracy ?: 0.0) * 100).toInt()}%")
+                        if (errorWords.isNotEmpty()) {
+                            append("Слова с ошибками: ")
+                            append(
+                                errorWords.take(5).joinToString(", ") {
+                                    "${it.udmurt} (${it.russian})"
+                                }
+                            )
+                        }
+                    }
+                    scope.launch {
+                        clipboard.copyText(report.trim())
+                        copiedSnackbar = true
+                    }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = UdmurtRed
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun ReportStat(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    onPrimary: Boolean = false
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (onPrimary) {
+                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            maxLines = 1
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (onPrimary) MaterialTheme.colorScheme.onPrimary else valueColor,
+            maxLines = 2,
+            textAlign = TextAlign.Start
+        )
+    }
+}
+
+@Composable
+private fun ReportCard(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = title,
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            content()
         }
     }
 }

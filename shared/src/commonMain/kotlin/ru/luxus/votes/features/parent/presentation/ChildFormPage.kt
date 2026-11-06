@@ -3,13 +3,13 @@ package ru.luxus.votes.features.parent.presentation
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -18,24 +18,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.ageFromUtcMillis
-import ru.luxus.votes.calculateAge
-import ru.luxus.votes.core.theme.CorrectGreen
-import ru.luxus.votes.core.theme.IncorrectRed
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ru.luxus.votes.core.datetime.ageFromUtcMillis
+import ru.luxus.votes.core.datetime.calculateAge
+import ru.luxus.votes.core.datetime.currentYear
+import ru.luxus.votes.core.datetime.dateDdMmYyyyToUtcMillis
+import ru.luxus.votes.core.datetime.utcMillisToDdMmYyyy
+import ru.luxus.votes.core.datetime.utcMillisYearsAgo
+import ru.luxus.votes.core.theme.LocalExtendedColors
 import ru.luxus.votes.core.widgets.T2Button
 import ru.luxus.votes.core.widgets.T2TextField
-import ru.luxus.votes.currentYear
-import ru.luxus.votes.dateDdMmYyyyToUtcMillis
 import ru.luxus.votes.features.parent.domain.ChildProfileModel
-import ru.luxus.votes.utcMillisToDdMmYyyy
-import ru.luxus.votes.utcMillisYearsAgo
 
 private val FORM_MASCOTS = listOf("🦊", "🐻", "🐰", "🐺", "🦔", "🐿️", "🦉", "🦆")
 
@@ -43,13 +41,12 @@ private data class PaceOption(
     val words: Int,
     val title: String,
     val wordsText: String,
-    val hint: String,
 )
 
 private val PACE_OPTIONS = listOf(
-    PaceOption(3, "Спокойный", "3 новых слова", "Короткие занятия без спешки"),
-    PaceOption(5, "Обычный", "5 новых слов", "Рекомендуемый ритм для новичка"),
-    PaceOption(10, "Интенсивный", "10 новых слов", "Для уверенных и увлечённых ребят"),
+    PaceOption(3, "Спокойный", "3 новых слова в день"),
+    PaceOption(5, "Обычный", "5 новых слов в день"),
+    PaceOption(10, "Интенсивный", "10 новых слов в день"),
 )
 
 /**
@@ -64,8 +61,9 @@ fun ChildFormPage(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val extended = LocalExtendedColors.current
 
     val isEditing = childId != null
     val existing: ChildProfileModel? = remember(childId, state.children) {
@@ -106,297 +104,356 @@ fun ChildFormPage(
                 title = {
                     Text(
                         text = if (isEditing) "Профиль ребёнка" else "Новый ребёнок",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Text("←", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Назад"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
         ) {
-            // Hero header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = 600.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(UdmurtGold.copy(alpha = 0.25f), CircleShape),
-                    contentAlignment = Alignment.Center
+                // Hero header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(avatar, fontSize = 34.sp)
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = avatar,
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = if (isEditing) {
+                                listOf(name, lastName).filter { it.isNotBlank() }
+                                    .joinToString(" ").ifBlank { "Ребёнок" }
+                            } else "О ребёнке",
+                            modifier = Modifier.semantics { heading() },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = if (isEditing)
+                                "Измените данные и сохраните"
+                            else
+                                "Имя, дата рождения и темп занятий.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column {
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Basic info card
+                FormCard(title = "Данные ребёнка") {
+                    T2TextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = "Имя ребёнка"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    T2TextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = "Фамилия (необязательно)"
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        DateField(
+                            value = birthDate,
+                            modifier = Modifier.weight(1f),
+                            onClick = { showDatePicker = true }
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        if (age != null) {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = extended.successContainer
+                            ) {
+                                Text(
+                                    text = "$age лет",
+                                    color = extended.onSuccessContainer,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Text(
-                        text = if (isEditing) {
-                            listOf(name, lastName).filter { it.isNotBlank() }.joinToString(" ").ifBlank { "Ребёнок" }
-                        } else "Знакомство",
+                        text = "Талисман",
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
-                        text = if (isEditing)
-                            "Обновите данные профиля и сохраните изменения"
-                        else
-                            "Заполните профиль — это займёт меньше минуты",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Basic info card
-            FormCard(title = "Основное", emoji = "📝") {
-                T2TextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = "Имя ребёнка"
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                T2TextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = "Фамилия (необязательно)"
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    DateField(
-                        value = birthDate,
-                        modifier = Modifier.weight(1f),
-                        onClick = { showDatePicker = true }
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    if (age != null) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = CorrectGreen.copy(alpha = 0.14f)
-                        ) {
-                            Text(
-                                text = "$age лет",
-                                color = CorrectGreen,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                            )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FORM_MASCOTS.chunked(4).forEach { rowMascots ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowMascots.forEach { mascot ->
+                                    val selected = avatar == mascot
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .heightIn(min = 48.dp)
+                                            .aspectRatio(1f)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (selected) {
+                                                    MaterialTheme.colorScheme.secondaryContainer
+                                                } else {
+                                                    MaterialTheme.colorScheme.surfaceVariant
+                                                }
+                                            )
+                                            .border(
+                                                width = if (selected) 2.dp else 0.dp,
+                                                color = if (selected) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    MaterialTheme.colorScheme.surfaceVariant
+                                                },
+                                                shape = CircleShape
+                                            )
+                                            .selectable(
+                                                selected = selected,
+                                                onClick = { avatar = mascot },
+                                                role = Role.RadioButton
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = mascot,
+                                            style = MaterialTheme.typography.titleLarge
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "Талисман:",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    FORM_MASCOTS.forEach { mascot ->
-                        Box(
+                // Learning pace card
+                FormCard(title = "Темп занятий") {
+                    PACE_OPTIONS.forEachIndexed { index, option ->
+                        val selected = pace == option.words
+                        Row(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.medium)
                                 .background(
-                                    if (avatar == mascot) UdmurtGold.copy(alpha = 0.45f)
-                                    else MaterialTheme.colorScheme.surfaceVariant
+                                    if (selected) {
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                    }
                                 )
                                 .border(
-                                    width = if (avatar == mascot) 2.dp else 0.dp,
-                                    color = if (avatar == mascot) UdmurtGold else MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = CircleShape
+                                    width = if (selected) 2.dp else 1.dp,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant
+                                    },
+                                    shape = MaterialTheme.shapes.medium
                                 )
-                                .clickable { avatar = mascot },
-                            contentAlignment = Alignment.Center
+                                .selectable(
+                                    selected = selected,
+                                    onClick = { pace = option.words },
+                                    role = Role.RadioButton
+                                )
+                                .heightIn(min = 56.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(mascot, fontSize = 22.sp)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = option.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                                Text(
+                                    text = option.wordsText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (selected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        if (index != PACE_OPTIONS.lastIndex) {
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Learning pace card
-            FormCard(title = "Темп занятий", emoji = "🎈") {
-                PACE_OPTIONS.forEachIndexed { index, option ->
-                    val selected = pace == option.words
-                    Row(
+                // Login credentials card
+                FormCard(title = "Вход ребёнка") {
+                    T2TextField(
+                        value = childEmail,
+                        onValueChange = { childEmail = it },
+                        label = "Email или логин ребёнка"
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    T2TextField(
+                        value = childPassword,
+                        onValueChange = { childPassword = it },
+                        label = if (isEditing) "Новый пароль (оставьте пустым, чтобы не менять)" else "Пароль для входа",
+                        isPassword = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Эти данные ребёнок вводит на экране входа.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            text = errorMessage.orEmpty(),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                T2Button(
+                    text = if (isEditing) "Сохранить изменения" else "Создать профиль",
+                    onClick = {
+                        val validationError = validateForm(
+                            name = name,
+                            age = age,
+                            childEmail = childEmail,
+                            childPassword = childPassword,
+                            isEditing = isEditing,
+                        )
+                        if (validationError != null) {
+                            errorMessage = validationError
+                        } else {
+                            errorMessage = null
+                            if (childId != null) {
+                                viewModel.onEvent(
+                                    ParentEvent.UpdateChild(
+                                        id = childId,
+                                        name = name.trim(),
+                                        lastName = lastName.trim(),
+                                        birthDate = birthDate,
+                                        avatar = avatar,
+                                        targetWords = pace,
+                                        childEmail = childEmail.trim(),
+                                        childPassword = childPassword,
+                                    )
+                                )
+                            } else {
+                                viewModel.onEvent(
+                                    ParentEvent.AddChild(
+                                        name = name.trim(),
+                                        lastName = lastName.trim(),
+                                        birthDate = birthDate,
+                                        avatar = avatar,
+                                        targetWords = pace,
+                                        childEmail = childEmail.trim(),
+                                        childPassword = childPassword,
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (childId != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                if (selected) UdmurtRed.copy(alpha = 0.08f)
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            )
-                            .border(
-                                width = if (selected) 2.dp else 1.dp,
-                                color = if (selected) UdmurtRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                shape = RoundedCornerShape(14.dp)
-                            )
-                            .clickable { pace = option.words }
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .heightIn(min = 52.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = option.title,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = if (selected) UdmurtRed else MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = option.wordsText,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
-                            )
-                            Text(
-                                text = option.hint,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-                            )
-                        }
-                        if (selected) {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                tint = UdmurtRed,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    if (index != PACE_OPTIONS.lastIndex) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Удалить профиль ребёнка",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Login credentials card
-            FormCard(title = "Вход ребёнка", emoji = "🔑") {
-                T2TextField(
-                    value = childEmail,
-                    onValueChange = { childEmail = it },
-                    label = "Email или логин ребёнка"
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                T2TextField(
-                    value = childPassword,
-                    onValueChange = { childPassword = it },
-                    label = if (isEditing) "Новый пароль (пусто — не менять)" else "Пароль для входа",
-                    isPassword = true
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "С этими данными ребёнок входит на экране входа.",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                )
-            }
-
-            if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = IncorrectRed.copy(alpha = 0.1f)
-                ) {
-                    Text(
-                        text = errorMessage.orEmpty(),
-                        color = IncorrectRed,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            T2Button(
-                text = if (isEditing) "Сохранить изменения" else "Создать профиль",
-                onClick = {
-                    val validationError = validateForm(
-                        name = name,
-                        age = age,
-                        childEmail = childEmail,
-                        childPassword = childPassword,
-                        isEditing = isEditing,
-                    )
-                    if (validationError != null) {
-                        errorMessage = validationError
-                    } else {
-                        errorMessage = null
-                        if (childId != null) {
-                            viewModel.onEvent(
-                                ParentEvent.UpdateChild(
-                                    id = childId,
-                                    name = name.trim(),
-                                    lastName = lastName.trim(),
-                                    birthDate = birthDate,
-                                    avatar = avatar,
-                                    targetWords = pace,
-                                    childEmail = childEmail.trim(),
-                                    childPassword = childPassword,
-                                )
-                            )
-                        } else {
-                            viewModel.onEvent(
-                                ParentEvent.AddChild(
-                                    name = name.trim(),
-                                    lastName = lastName.trim(),
-                                    birthDate = birthDate,
-                                    avatar = avatar,
-                                    targetWords = pace,
-                                    childEmail = childEmail.trim(),
-                                    childPassword = childPassword,
-                                )
-                            )
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                containerColor = UdmurtRed
-            )
-
-            if (childId != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = { showDeleteConfirm = true },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = IncorrectRed),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Удалить профиль ребёнка")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
@@ -447,9 +504,9 @@ fun ChildFormPage(
     if (showDeleteConfirm && childId != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Удалить профиль?", fontWeight = FontWeight.Bold) },
+            title = { Text("Удалить профиль ребёнка?", fontWeight = FontWeight.Bold) },
             text = {
-                Text("Профиль, статистика и прогресс ребёнка будут удалены без возможности восстановления.")
+                Text("Профиль, статистика и прогресс ребёнка удалятся навсегда.")
             },
             confirmButton = {
                 Button(
@@ -457,7 +514,10 @@ fun ChildFormPage(
                         showDeleteConfirm = false
                         viewModel.onEvent(ParentEvent.DeleteChild(childId))
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = IncorrectRed)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
                 ) {
                     Text("Удалить")
                 }
@@ -480,7 +540,7 @@ private fun validateForm(
 ): String? = when {
     name.isBlank() -> "Введите имя ребёнка"
     age == null -> "Укажите дату рождения ребёнка"
-    age !in 5..10 -> "Приложение рассчитано на детей 5–10 лет"
+    age !in 5..10 -> "Приложение рассчитано на детей от 5 до 10 лет"
     childEmail.isBlank() -> "Укажите email или логин ребёнка"
     !isEditing && childPassword.isBlank() -> "Придумайте пароль для входа ребёнка"
     childPassword.isNotBlank() && childPassword.length < 4 -> "Пароль должен быть не короче 4 символов"
@@ -494,10 +554,11 @@ private fun DateField(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 56.dp),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -508,12 +569,12 @@ private fun DateField(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Дата рождения",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = value.ifBlank { "Выберите дату" },
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = if (value.isBlank()) FontWeight.Normal else FontWeight.Medium,
                     color = if (value.isBlank()) {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
@@ -525,7 +586,7 @@ private fun DateField(
             Icon(
                 Icons.Default.DateRange,
                 contentDescription = "Открыть календарь",
-                tint = UdmurtRed
+                tint = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -534,19 +595,19 @@ private fun DateField(
 @Composable
 private fun FormCard(
     title: String,
-    emoji: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "$emoji $title",
-                fontSize = 15.sp,
+                text = title,
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )

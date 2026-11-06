@@ -2,27 +2,27 @@ package ru.luxus.votes.features.settings.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.IncorrectRed
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.luxus.votes.core.widgets.QuizScaffold
-import ru.luxus.votes.core.widgets.T2Button
 
 @Composable
 fun SettingsPage(
     viewModel: SettingsViewModel,
     onBack: () -> Unit
 ) {
-    val settings by viewModel.settings.collectAsState()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
 
     QuizScaffold(
         title = "Настройки",
@@ -34,9 +34,10 @@ fun SettingsPage(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "Параметры приложения:",
+                text = "Основное",
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
@@ -44,13 +45,15 @@ fun SettingsPage(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     SettingSwitchRow(
-                        title = "Звуковые эффекты и озвучка",
-                        description = "Произношение слов и звуки в викторинах",
+                        title = "Звук",
+                        description = "Произношение слов и звуки в играх",
                         checked = settings.soundEnabled,
                         onCheckedChange = { viewModel.onEvent(SettingsEvent.ToggleSound(it)) }
                     )
@@ -59,7 +62,7 @@ fun SettingsPage(
 
                     SettingSwitchRow(
                         title = "Уведомления",
-                        description = "Напоминания о новых словах дня и уроках",
+                        description = "Напоминания о слове дня и занятиях",
                         checked = settings.notificationsEnabled,
                         onCheckedChange = { viewModel.onEvent(SettingsEvent.ToggleNotifications(it)) }
                     )
@@ -68,7 +71,7 @@ fun SettingsPage(
 
                     SettingSwitchRow(
                         title = "Геолокация",
-                        description = "Уведомления о культурных памятниках Удмуртии рядом",
+                        description = "Показывать места Удмуртии рядом",
                         checked = settings.geolocationEnabled,
                         onCheckedChange = { viewModel.onEvent(SettingsEvent.ToggleGeolocation(it)) }
                     )
@@ -77,35 +80,28 @@ fun SettingsPage(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // App & State Program info
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "О программе",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    Text(
+                        text = "О приложении",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Приложение «Ӟеч-а бур-а удмурт кыл?» (Версия 1.0.0, Offline Edition).\n" +
-                                "Разработано в рамках государственной программы Удмуртской Республики «Сохранение, изучение и развитие удмуртского языка» (Постановление Правительства УР № 748 от 20.11.2023 г.).\n\n" +
-                                "Все материалы, карточки, озвучка и игры полностью автономны и не требуют подключения к сети интернет.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                        lineHeight = 18.sp
+                        text = "Приложение «Ӟеч-а бур-а удмурт кыл?». Версия 1.0.0.\n" +
+                                "Приложение создано по государственной программе «Сохранение, изучение и развитие государственных языков Удмуртской Республики и иных языков народов Удмуртской Республики», Постановление Правительства УР № 748 от 20.11.2023.\n\n" +
+                                "Приложение работает без интернета. Слова, картинки и звуки уже есть на устройстве.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -123,27 +119,38 @@ private fun SettingSwitchRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            // The whole row is the switch target, not just the small thumb.
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange
+            )
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Spacer(modifier = Modifier.width(12.dp))
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = UdmurtRed, checkedTrackColor = UdmurtRed.copy(alpha = 0.35f))
+            onCheckedChange = null,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary
+            )
         )
     }
 }

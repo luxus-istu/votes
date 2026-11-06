@@ -28,4 +28,39 @@ Use the run button in your IDE's editor gutter, or run tests using Gradle tasks:
 
 ---
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## Project structure & conventions
+
+### Modules
+
+- `androidApp/` — thin Android entry point (Application, MainActivity, theme resources).
+- `shared/` — all features and business logic (Compose Multiplatform UI + Room database).
+- `iosApp/` — thin iOS entry point consuming the `Shared` framework.
+
+### Shared module layout
+
+```
+ru.luxus.votes
+├── App.kt                      # root composable
+├── navigation/                 # type-safe navigation routes (serialized data objects)
+├── root/                       # app start-up flow (session, onboarding gating)
+├── core/
+│   ├── database/               # Room: AppDatabase, Dao/, entity/, factory per platform
+│   ├── datetime/               # date helpers (expect/actual) shared by all features
+│   ├── di/                     # Koin bootstrap (initKoin)
+│   ├── sound/                  # expect/actual SoundPlayer
+│   ├── theme/                  # UdmurtTheme, typography, extended colors
+│   └── widgets/                # shared design-system components (T2Button, …)
+└── features/
+    └── <feature>/              # auth, games, lessons, parent, profile, settings, …
+        ├── data/               # repositories (impl), local data sources
+        ├── domain/             # models (`XxxModel`), repository interfaces, pure logic
+        └── presentation/       # pages (Compose) + ViewModels
+```
+
+### Patterns
+
+- **Naming**: a persisted row is `XxxEntity` (in `core.database.entity`), its domain model is `XxxModel` (in the feature's `domain`), e.g. `UserEntity` → `UserModel`. Repository interfaces live in `domain`, implementations in `data`.
+- **ViewModels**: `XxxViewModel` exposes a **sealed state** (`XxxState.Loading / Loaded / Error`) as `StateFlow` and a **sealed event** (`XxxEvent`); UI only talks to the ViewModel through `onEvent(...)` — never calls private logic directly.
+- **UI**: screens are stateful `XxxPage` composables that collect state via `collectAsStateWithLifecycle()`; reusable leaf components take callbacks, not ViewModels.
+- **DI**: constructor injection via Koin annotations (`@Single`, `@Factory`, `@KoinViewModel`); no manual module wiring.
+- **Tests**: pure logic (date parsing, etc.) is covered in `commonTest` and runs on every host platform.

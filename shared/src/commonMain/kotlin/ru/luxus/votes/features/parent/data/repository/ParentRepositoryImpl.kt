@@ -1,26 +1,27 @@
-package ru.luxus.votes.features.parent.data
+package ru.luxus.votes.features.parent.data.repository
 
-import org.koin.core.annotation.Single
+import org.koin.core.annotation.Singleton
 import ru.luxus.votes.core.database.AppDatabase
 import ru.luxus.votes.core.database.entity.ChildLessonProgressEntity
 import ru.luxus.votes.core.database.entity.ChildProfileEntity
 import ru.luxus.votes.core.database.entity.ChildStatsEntity
 import ru.luxus.votes.core.database.entity.ChildWordErrorEntity
-import ru.luxus.votes.features.games.data.GamesRepository
 import ru.luxus.votes.features.games.domain.WordErrorEntry
+import ru.luxus.votes.features.games.domain.repository.GamesRepository
 import ru.luxus.votes.features.parent.domain.ChildProfileModel
-import ru.luxus.votes.calculateAge
-import ru.luxus.votes.getTodayDateString
+import ru.luxus.votes.features.parent.domain.repository.ParentRepository
+import ru.luxus.votes.core.datetime.calculateAge
+import ru.luxus.votes.core.datetime.getTodayDateString
 
-@Single
-class ParentRepository(
+@Singleton(binds = [ParentRepository::class])
+class ParentRepositoryImpl(
     private val db: AppDatabase,
     private val gamesRepository: GamesRepository,
-) {
+) : ParentRepository {
 
     private val childDao = db.childDao()
 
-    suspend fun getAllChildren(): List<ChildProfileModel> {
+    override suspend fun getAllChildren(): List<ChildProfileModel> {
         val allWords = gamesRepository.defaultWords
         val totalWordsCount = allWords.size
 
@@ -42,10 +43,12 @@ class ParentRepository(
 
             val accuracy = if (totalAns > 0) totalCorr.toFloat() / totalAns else 0f
 
+            val wordsById = gamesRepository.getWords().associateBy { it.id }
             val topErrors = errorRows.map {
                 WordErrorEntry(
                     wordId = it.wordId,
                     udmurt = it.udmurt,
+                    transcription = wordsById[it.wordId]?.transcription.orEmpty(),
                     russian = it.russian,
                     errorCount = it.errorCount,
                     successCount = it.successCount,
@@ -83,20 +86,20 @@ class ParentRepository(
         }
     }
 
-    suspend fun getActiveChild(): ChildProfileModel? {
+    override suspend fun getActiveChild(): ChildProfileModel? {
         val all = getAllChildren()
         return all.firstOrNull { it.isActive } ?: all.firstOrNull()
     }
 
     /** All child profiles owned by a parent account. */
-    suspend fun getChildrenForParent(parentEmail: String): List<ChildProfileModel> {
+    override suspend fun getChildrenForParent(parentEmail: String): List<ChildProfileModel> {
         val email = parentEmail.trim().lowercase()
         if (email.isBlank()) return emptyList()
         return getAllChildren().filter { it.parentEmail == email }
     }
 
     /** True when the login email is already used by a user or another child profile. */
-    suspend fun isChildEmailTaken(email: String, excludeChildId: String? = null): Boolean {
+    override suspend fun isChildEmailTaken(email: String, excludeChildId: String?): Boolean {
         val normalized = email.trim().lowercase()
         if (normalized.isBlank()) return false
         val existingChild = childDao.getChildByEmail(normalized)
@@ -104,15 +107,15 @@ class ParentRepository(
         return db.userDao().getByEmail(normalized) != null
     }
 
-    suspend fun addChild(
+    override suspend fun addChild(
         name: String,
-        lastName: String = "",
+        lastName: String,
         birthDate: String,
         avatar: String,
-        targetWordsPerDay: Int = 5,
-        parentEmail: String = "",
-        childEmail: String = "",
-        childPassword: String = "",
+        targetWordsPerDay: Int,
+        parentEmail: String,
+        childEmail: String,
+        childPassword: String,
     ): ChildProfileModel {
         val id = "child_${getTodayDateString()}_${(100..999).random()}"
         val isFirst = childDao.getAllChildren().isEmpty()
@@ -137,14 +140,14 @@ class ParentRepository(
         return getAllChildren().first { it.id == id }
     }
 
-    suspend fun updateChild(
+    override suspend fun updateChild(
         id: String,
         name: String,
-        lastName: String = "",
+        lastName: String,
         birthDate: String,
         avatar: String,
         targetWordsPerDay: Int,
-        fallbackAge: Int? = null,
+        fallbackAge: Int?,
     ) {
         childDao.updateChild(
             id = id,
@@ -157,7 +160,7 @@ class ParentRepository(
         )
     }
 
-    suspend fun updateChildCredentials(
+    override suspend fun updateChildCredentials(
         id: String,
         childEmail: String,
         childPassword: String,
@@ -175,7 +178,7 @@ class ParentRepository(
         )
     }
 
-    suspend fun deleteChild(id: String) {
+    override suspend fun deleteChild(id: String) {
         childDao.deleteChild(id)
         // If the active child was deleted, activate the first remaining
         val remaining = childDao.getAllChildren()
@@ -184,7 +187,7 @@ class ParentRepository(
         }
     }
 
-    suspend fun recordGameResultForActiveChild(
+    override suspend fun recordGameResultForActiveChild(
         gameKey: String,
         isCorrect: Boolean,
         wordId: String?,
@@ -219,7 +222,7 @@ class ParentRepository(
         }
     }
 
-    suspend fun recordWordLearnedForActiveChild(wordId: String) {
+    override suspend fun recordWordLearnedForActiveChild(wordId: String) {
         val active = childDao.getActiveChild() ?: return
         childDao.markChildWordViewed(ChildLessonProgressEntity(active.id, wordId))
     }

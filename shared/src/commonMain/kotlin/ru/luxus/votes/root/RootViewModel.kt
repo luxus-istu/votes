@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
-import ru.luxus.votes.features.auth.data.AuthRepository
-import ru.luxus.votes.features.auth.data.SessionRepository
-import ru.luxus.votes.features.auth.domain.UserEntity
-import ru.luxus.votes.features.onboarding.data.OnboardingRepository
+import ru.luxus.votes.features.auth.domain.repository.AuthRepository
+import ru.luxus.votes.features.auth.domain.repository.SessionRepository
+import ru.luxus.votes.features.auth.domain.UserModel
+import ru.luxus.votes.features.onboarding.domain.repository.OnboardingRepository
 
 sealed interface RootState {
     data object Loading : RootState
@@ -48,7 +48,7 @@ class RootViewModel(
         }
     }
 
-    private suspend fun resolve(user: UserEntity?): RootState {
+    private suspend fun resolve(user: UserModel?): RootState {
         if (!onboardingRepository.isAppOnboardingDone()) {
             return RootState.AppOnboarding
         }

@@ -1,10 +1,8 @@
 package ru.luxus.votes.features.games.presentation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -12,17 +10,16 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import ru.luxus.votes.core.theme.UdmurtGold
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import ru.luxus.votes.core.widgets.QuizScaffold
 import ru.luxus.votes.features.games.domain.GAME_UNLOCKS
 import ru.luxus.votes.features.games.domain.GameUnlock
@@ -33,14 +30,14 @@ fun GamesHubPage(
     onNavigateToGame: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.onEvent(GamesEvent.LoadStats)
     }
 
     QuizScaffold(
-        title = "Игры и Викторины",
+        title = "Игры",
         onBack = onBack
     ) {
         Column(
@@ -55,41 +52,35 @@ fun GamesHubPage(
             if (stats != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = UdmurtRed)
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
                 ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Игровой прогресс",
-                                color = White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text(
+                            text = "Результаты игр",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
                         Spacer(modifier = Modifier.height(14.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text("Всего ответов", color = White.copy(alpha = 0.8f), fontSize = 12.sp)
-                                Text("${stats.totalAnswered}", color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Column {
-                                Text("Правильно", color = White.copy(alpha = 0.8f), fontSize = 12.sp)
-                                Text("${stats.totalCorrect}", color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Column {
-                                Text("Точность", color = White.copy(alpha = 0.8f), fontSize = 12.sp)
-                                Text("${(stats.accuracy * 100).toInt()}%", color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            }
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            StatColumn(
+                                label = "Ответов",
+                                value = "${stats.totalAnswered}",
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatColumn(
+                                label = "Верно",
+                                value = "${stats.totalCorrect}",
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatColumn(
+                                label = "Точность",
+                                value = "${(stats.accuracy * 100).toInt()}%",
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -97,8 +88,9 @@ fun GamesHubPage(
             }
 
             Text(
-                text = "Все 6 обучающих игр:",
-                fontSize = 18.sp,
+                text = "Выбери игру",
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -106,11 +98,9 @@ fun GamesHubPage(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Игры открываются по мере изучения слов. " +
-                    "Сначала пройди карточки в разделе «Обучение», а потом проверь знания в игре.",
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f)
+                text = "Чтобы открыть новую игру, изучай слова в карточках.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -136,6 +126,31 @@ fun GamesHubPage(
 }
 
 @Composable
+private fun StatColumn(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimary
+        )
+    }
+}
+
+@Composable
 private fun GameModeCard(
     game: GameUnlock,
     learnedWords: Int,
@@ -143,19 +158,17 @@ private fun GameModeCard(
 ) {
     val unlocked = learnedWords >= game.requiredWords
     val remaining = (game.requiredWords - learnedWords).coerceAtLeast(0)
+    val accent = MaterialTheme.colorScheme.primary
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .clickable(enabled = unlocked, onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
+        onClick = onClick,
+        enabled = unlocked,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = if (unlocked) {
-                MaterialTheme.colorScheme.surfaceVariant
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-            }
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
         )
     ) {
         Row(
@@ -166,22 +179,27 @@ private fun GameModeCard(
                 modifier = Modifier
                     .size(54.dp)
                     .background(
-                        UdmurtGold.copy(alpha = if (unlocked) 0.2f else 0.1f),
-                        RoundedCornerShape(14.dp)
+                        color = if (unlocked) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                        shape = MaterialTheme.shapes.medium
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (unlocked) game.emoji else "🔒",
-                    fontSize = 28.sp
+                Icon(
+                    imageVector = gameIcon(game.key),
+                    contentDescription = null,
+                    tint = if (unlocked) MaterialTheme.colorScheme.onPrimaryContainer else muted,
+                    modifier = Modifier.size(28.dp)
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = game.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (unlocked) 1f else 0.6f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -191,9 +209,9 @@ private fun GameModeCard(
                     } else {
                         "Изучи ещё $remaining ${wordsWord(remaining)}, чтобы открыть игру"
                     },
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    lineHeight = 16.sp
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = MaterialTheme.typography.bodySmall.lineHeight
                 )
 
                 if (!unlocked) {
@@ -206,24 +224,24 @@ private fun GameModeCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = UdmurtRed,
-                        trackColor = UdmurtRed.copy(alpha = 0.15f)
+                            .clip(MaterialTheme.shapes.extraSmall),
+                        color = accent,
+                        trackColor = accent.copy(alpha = 0.15f)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Изучено $learnedWords из ${game.requiredWords} слов",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Medium,
-                        color = UdmurtRed
+                        color = accent
                     )
                 }
             }
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = if (unlocked) Icons.AutoMirrored.Filled.ArrowForward else Icons.Default.Lock,
-                contentDescription = if (unlocked) "Открыть игру" else "Игра закрыта",
-                tint = if (unlocked) UdmurtRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                contentDescription = null,
+                tint = if (unlocked) accent else muted.copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp)
             )
         }

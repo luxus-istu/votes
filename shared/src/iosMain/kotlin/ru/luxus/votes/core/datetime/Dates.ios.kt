@@ -1,4 +1,4 @@
-package ru.luxus.votes
+package ru.luxus.votes.core.datetime
 
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarUnitDay
