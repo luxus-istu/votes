@@ -3,23 +3,22 @@ package ru.luxus.votes.features.auth.presentation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.jetbrains.compose.resources.painterResource
-import ru.luxus.votes.core.theme.UdmurtRed
-import ru.luxus.votes.core.theme.White
 import ru.luxus.votes.core.widgets.T2Button
 import ru.luxus.votes.core.widgets.T2TextField
 import ru.luxus.votes.core.widgets.T2TopSnackBar
@@ -31,18 +30,18 @@ fun LoginPage(
     viewModel: AuthViewModel,
     onLoginSuccess: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     // "login" | "register"
-    var mode by remember { mutableStateOf("login") }
+    var mode by rememberSaveable { mutableStateOf("login") }
 
     // Login (parent or child: email + password)
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
 
     // Parent registration
-    var regFirstName by remember { mutableStateOf("") }
-    var regLastName by remember { mutableStateOf("") }
+    var regFirstName by rememberSaveable { mutableStateOf("") }
+    var regLastName by rememberSaveable { mutableStateOf("") }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -60,6 +59,7 @@ fun LoginPage(
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
+            .imePadding()
             .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
@@ -82,23 +82,22 @@ fun LoginPage(
 
             Text(
                 text = "Ӟеч-а бур-а удмурт кыл?",
-                fontSize = 26.sp,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = UdmurtRed,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
 
             Text(
                 text = "Здравствуй, удмуртский язык!",
-                fontSize = 15.sp,
+                style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Switch: Вход / Регистрация
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -127,9 +126,8 @@ fun LoginPage(
             if (mode == "register") {
                 Text(
                     text = "Регистрация родителя",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -137,58 +135,82 @@ fun LoginPage(
                 T2TextField(
                     value = regFirstName,
                     onValueChange = { regFirstName = it },
-                    label = "Имя"
+                    label = "Имя",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 T2TextField(
                     value = regLastName,
                     onValueChange = { regLastName = it },
-                    label = "Фамилия"
+                    label = "Фамилия",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 T2TextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = "Email или логин"
+                    label = "Email или логин",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 T2TextField(
                     value = password,
                     onValueChange = { password = it },
                     label = "Пароль",
-                    isPassword = true
+                    isPassword = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "После регистрации добавьте профили детей в кабинете родителя — там же вы зададите email и пароль для входа ребёнка.",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    text = "После регистрации добавьте профиль ребёнка и придумайте для него логин и пароль.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 T2TextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = "Email или логин"
+                    label = "Email или логин",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 T2TextField(
                     value = password,
                     onValueChange = { password = it },
                     label = "Пароль",
-                    isPassword = true
+                    isPassword = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Подходит для входа родителя и ребёнка (логин ребёнка выдаётся в кабинете родителя).",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    text = "Этот экран подходит для входа родителя и ребёнка. Логин ребёнка создаётся в кабинете родителя.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             if (state is AuthState.Loading) {
-                CircularProgressIndicator(color = UdmurtRed)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             } else {
                 T2Button(
                     text = if (mode == "register") "Зарегистрироваться" else "Войти",
@@ -207,8 +229,7 @@ fun LoginPage(
                             viewModel.onEvent(AuthEvent.SubmitLogin(email, password))
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    containerColor = UdmurtRed
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -216,8 +237,7 @@ fun LoginPage(
         T2TopSnackBar(
             message = errorMessage,
             onDismiss = { errorMessage = null },
-            modifier = Modifier.align(Alignment.TopCenter),
-            backgroundColor = UdmurtRed
+            modifier = Modifier.align(Alignment.TopCenter)
         )
     }
 }
@@ -233,11 +253,25 @@ private fun SegmentButton(
         onClick = onClick,
         modifier = modifier,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) UdmurtRed else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (selected) White else MaterialTheme.colorScheme.onSurface
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+            contentColor = if (selected) {
+                MaterialTheme.colorScheme.onPrimary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
         ),
-        shape = RoundedCornerShape(100.dp)
+        shape = RoundedCornerShape(100.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
     ) {
-        Text(text, fontWeight = FontWeight.Bold)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
     }
 }
